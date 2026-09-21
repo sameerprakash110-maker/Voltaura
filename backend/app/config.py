@@ -11,6 +11,7 @@ import os
 from functools import lru_cache
 from pathlib import Path
 
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 BACKEND_DIR = Path(__file__).resolve().parent.parent
@@ -71,6 +72,15 @@ class Settings(BaseSettings):
     llm_model: str = "claude-sonnet-5"
     llm_enabled: bool = True   # only has effect when a key is present
 
+    # ---- investigation reasoning provider ----------------------------
+    # These intentionally use unprefixed aliases so local development can
+    # configure the Gemini provider with GEMINI_API_KEY / GEMINI_MODEL.
+    gemini_api_key: str = Field(default="", validation_alias="GEMINI_API_KEY")
+    gemini_model: str = Field(
+        default="gemini-2.5-flash",
+        validation_alias="GEMINI_MODEL",
+    )
+
     @property
     def cors_origin_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
@@ -78,6 +88,10 @@ class Settings(BaseSettings):
     @property
     def llm_available(self) -> bool:
         return bool(self.llm_api_key) and self.llm_enabled
+
+    @property
+    def gemini_available(self) -> bool:
+        return bool(self.gemini_api_key)
 
 
 @lru_cache

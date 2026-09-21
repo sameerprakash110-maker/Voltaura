@@ -14,6 +14,8 @@ from ..database import get_db
 from ..models import Anomaly, AnomalyStatus, Recommendation
 from ..schemas import AnomalyDetail, AnomalyOut
 from ..services import analytics, llm, pipeline, settings_service
+from ..services.investigation.investigator import investigate
+from ..services.investigation.agent import investigate_anomaly
 from .common import (
     anomaly_payload,
     building_lookup,
@@ -119,6 +121,61 @@ def get_anomaly(
         context={k: v for k, v in context.items() if k != "valid"},
         hourly_profile=hourly_profile,
     )
+
+
+@router.get("/anomalies/{anomaly_id}/investigation")
+def get_investigation(
+    anomaly_id: int,
+    db: Session = Depends(get_db),
+) -> dict:
+    """Return deterministic investigation state for an existing anomaly."""
+    anomaly = get_anomaly_or_404(db, anomaly_id)
+    building = get_building_or_404(db, anomaly.building_id)
+
+    df = pipeline.load_frame(db, building, anomaly.resource_type)
+    if df.empty:
+        raise HTTPException(
+            status_code=409,
+            detail="No telemetry available for this building. Run: python scripts/seed.py",
+        )
+
+    context = build_context(
+        df,
+        [pd.Timestamp(t) for t in (anomaly.intervals or [])],
+        anomaly.resource_type,
+        building,
+    )
+    if not context.get("valid", False):
+        raise HTTPException(
+            status_code=409,
+            detail="Investigation context could not be established for this anomaly.",
+        )
+
+    anomaly_data = {
+        column.name: getattr(anomaly, column.name)
+        for column in anomaly.__table__.columns
+    }
+    result = investigate(anomaly_data, context)
+    result["resource"] = result.pop("resource_type")
+    return result
+
+
+@router.get("/anomalies/{anomaly_id}/investigation/agent")
+def get_agent_investigation(
+    anomaly_id: int,
+    db: Session = Depends(get_db),
+) -> dict:
+    """Run the bounded deterministic/optional-LLM investigation agent."""
+    # Preserve the router's established 404 behavior before delegating the
+    # complete orchestration to the investigation agent.
+    get_anomaly_or_404(db, anomaly_id)
+    result = investigate_anomaly(anomaly_id, db)
+    if result.get("status") == "BLOCKED":
+        raise HTTPException(
+            status_code=409,
+            detail=result.get("investigation_summary", "Investigation context unavailable."),
+        )
+    return result
 
 
 @router.post("/anomalies/{anomaly_id}/analyze", response_model=AnomalyDetail)
