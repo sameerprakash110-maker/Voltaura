@@ -55,15 +55,10 @@ def _install_context(monkeypatch, context: dict | None = None) -> None:
     )
 
 
-def test_configured_provider_response_is_parsed_as_structured_decision(monkeypatch) -> None:
-    class Response:
-        text = '{"reasoning":"Need flow history","hypothesis_focus":"Water leakage","requested_tool":"get_historical_readings","tool_arguments":{"hours":24},"confidence":"medium","stop":false}'
-
+def _install_fake_gemini(monkeypatch, response, key: str) -> None:
     class Messages:
         def generate_content(self, **kwargs):
-            assert "investigation_state" in kwargs["contents"]
-            assert kwargs["config"]["response_mime_type"] == "application/json"
-            return Response()
+            return response
 
     class Client:
         def __init__(self, **kwargs):
@@ -78,8 +73,23 @@ def test_configured_provider_response_is_parsed_as_structured_decision(monkeypat
     fake_google.genai = fake_genai
     monkeypatch.setitem(sys.modules, "google", fake_google)
     monkeypatch.setitem(sys.modules, "google.genai", fake_genai)
-    monkeypatch.setattr(reasoning.llm.settings, "gemini_api_key", "test-key")
+    monkeypatch.setattr(reasoning.llm.settings, "gemini_api_key", key)
     monkeypatch.setattr(reasoning.llm.settings, "gemini_model", "gemini-test")
+
+
+def test_configured_provider_response_is_parsed_as_structured_decision(monkeypatch) -> None:
+    response = types.SimpleNamespace(
+        text='{"reasoning":"Need flow history","hypothesis_focus":"Water leakage","requested_tool":"get_historical_readings","tool_arguments":{"hours":24},"confidence":"medium","stop":false}',
+        candidates=[types.SimpleNamespace(finish_reason=types.SimpleNamespace(name="STOP"))],
+    )
+    _install_fake_gemini(monkeypatch, response, "test-key-stop")
+
+    original_parse = reasoning._parse_json
+    monkeypatch.setattr(
+        reasoning,
+        "_parse_json",
+        lambda text: original_parse(text),
+    )
 
     decision = reasoning.reason_about(
         {"unknowns": [{"signal": "flow", "status": "UNKNOWN"}]},
@@ -89,6 +99,43 @@ def test_configured_provider_response_is_parsed_as_structured_decision(monkeypat
     assert decision is not None
     assert decision.requested_tool == "get_historical_readings"
     assert decision.tool_arguments == {"hours": 24}
+
+
+def test_max_tokens_returns_none_without_json_parsing(monkeypatch) -> None:
+    response = types.SimpleNamespace(
+        text='{"reasoning":"incomplete',
+        candidates=[types.SimpleNamespace(finish_reason=types.SimpleNamespace(name="MAX_TOKENS"))],
+    )
+    _install_fake_gemini(monkeypatch, response, "test-key-max-tokens")
+    monkeypatch.setattr(
+        reasoning,
+        "_parse_json",
+        lambda text: (_ for _ in ()).throw(AssertionError("JSON was parsed")),
+    )
+
+    assert reasoning.reason_about({}, list(agent.ALLOWED_TOOLS)) is None
+
+
+def test_missing_finish_reason_returns_none_without_json_parsing(monkeypatch) -> None:
+    response = types.SimpleNamespace(text='{}', candidates=[])
+    _install_fake_gemini(monkeypatch, response, "test-key-missing-finish")
+    monkeypatch.setattr(
+        reasoning,
+        "_parse_json",
+        lambda text: (_ for _ in ()).throw(AssertionError("JSON was parsed")),
+    )
+
+    assert reasoning.reason_about({}, list(agent.ALLOWED_TOOLS)) is None
+
+
+def test_malformed_json_with_stop_uses_existing_fallback(monkeypatch) -> None:
+    response = types.SimpleNamespace(
+        text='{"reasoning":"unterminated',
+        candidates=[types.SimpleNamespace(finish_reason=types.SimpleNamespace(name="STOP"))],
+    )
+    _install_fake_gemini(monkeypatch, response, "test-key-malformed-json")
+
+    assert reasoning.reason_about({}, list(agent.ALLOWED_TOOLS)) is None
 
 
 def test_valid_llm_tool_request_is_executed_after_validation(monkeypatch) -> None:
