@@ -73,9 +73,23 @@ export function pValue(value: number | null | undefined): string {
   return value.toFixed(3);
 }
 
+/**
+ * Backend timestamps are stored as naive UTC datetimes for SQLite portability.
+ * Treat only timezone-less ISO timestamps as UTC; timezone-aware values are
+ * left untouched so they are never converted twice.
+ */
+function parseApiDate(value: string | Date): Date {
+  if (value instanceof Date) return value;
+  const timezoneSuffix = /(?:Z|[+-]\d{2}:?\d{2})$/i;
+  const isoDateTime = /^\d{4}-\d{2}-\d{2}T/;
+  return new Date(
+    isoDateTime.test(value) && !timezoneSuffix.test(value) ? `${value}Z` : value,
+  );
+}
+
 export function date(value: string | Date | null | undefined): string {
   if (!value) return "--";
-  const d = typeof value === "string" ? new Date(value) : value;
+  const d = parseApiDate(value);
   if (Number.isNaN(d.getTime())) return "--";
   return d.toLocaleDateString("en-GB", {
     day: "2-digit",
@@ -86,14 +100,14 @@ export function date(value: string | Date | null | undefined): string {
 
 export function dateShort(value: string | Date | null | undefined): string {
   if (!value) return "--";
-  const d = typeof value === "string" ? new Date(value) : value;
+  const d = parseApiDate(value);
   if (Number.isNaN(d.getTime())) return "--";
   return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short" });
 }
 
 export function dateTime(value: string | Date | null | undefined): string {
   if (!value) return "--";
-  const d = typeof value === "string" ? new Date(value) : value;
+  const d = parseApiDate(value);
   if (Number.isNaN(d.getTime())) return "--";
   return `${d.toLocaleDateString("en-GB", {
     day: "2-digit",
@@ -110,7 +124,7 @@ export function duration(hours: number): string {
 
 export function relativeDays(value: string | null | undefined): string {
   if (!value) return "--";
-  const then = new Date(value).getTime();
+  const then = parseApiDate(value).getTime();
   if (Number.isNaN(then)) return "--";
   const days = Math.round((Date.now() - then) / 86_400_000);
   if (days <= 0) return "today";
