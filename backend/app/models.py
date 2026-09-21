@@ -132,6 +132,9 @@ class Building(Base):
     faults: Mapped[list["Fault"]] = relationship(
         back_populates="building", cascade="all, delete-orphan", passive_deletes=True
     )
+    raw_water_telemetry: Mapped[list["RawWaterTelemetry"]] = relationship(
+        back_populates="building", cascade="all, delete-orphan", passive_deletes=True
+    )
 
 
 class EnergyReading(Base):
@@ -192,6 +195,14 @@ class WaterReading(Base):
 
     fault_code: Mapped[str | None] = mapped_column(String(32), nullable=True)
     expected_liters: Mapped[float | None] = mapped_column(Float, nullable=True)
+
+    # Provenance tracking: 'simulator' or 'esp32'
+    source: Mapped[str] = mapped_column(String(32), default="simulator", index=True)
+
+    # Optional physical telemetry aggregated metrics
+    water_level_pct: Mapped[float | None] = mapped_column(Float, nullable=True)
+    tds_ppm: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    turbidity_ntu: Mapped[float | None] = mapped_column(Float, nullable=True)
 
     building: Mapped[Building] = relationship(back_populates="water_readings")
 
@@ -429,3 +440,61 @@ class SimulationState(Base):
     data_end_ts: Mapped[datetime] = mapped_column(DateTime)
     seeded_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
     demo_mode: Mapped[bool] = mapped_column(Boolean, default=True)
+
+
+class RawWaterTelemetry(Base):
+    """
+    High-frequency raw telemetry ingested from physical nodes (e.g. ESP32).
+
+    This table stores sub-minute telemetry as received from the edge hardware
+    (interval_seconds: 5-60s) before any hourly aggregation into `water_readings`.
+    """
+
+    __tablename__ = "raw_water_telemetry"
+    __table_args__ = (
+        Index("ix_raw_water_telemetry_device_received", "device_id", "received_at"),
+        Index("ix_raw_water_telemetry_building_received", "building_id", "received_at"),
+        Index("ix_raw_water_telemetry_bldg_dev_rcvd", "building_id", "device_id", "received_at"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+
+    # Device identity & metadata
+    device_id: Mapped[str] = mapped_column(String(64), index=True)
+    building_id: Mapped[int] = mapped_column(
+        ForeignKey("buildings.id", ondelete="CASCADE"), index=True
+    )
+    schema_version: Mapped[str] = mapped_column(String(16), default="1.0")
+    source: Mapped[str] = mapped_column(String(32), default="esp32")
+
+    # Timing
+    device_timestamp: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    received_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, index=True)
+    interval_seconds: Mapped[int] = mapped_column(Integer)
+
+    # Water telemetry
+    water_level_pct: Mapped[float | None] = mapped_column(Float, nullable=True)
+    water_level_cm: Mapped[float | None] = mapped_column(Float, nullable=True)
+    flow_rate_lpm: Mapped[float | None] = mapped_column(Float, nullable=True)
+    volume_liters: Mapped[float | None] = mapped_column(Float, nullable=True)
+
+    # Water quality
+    tds_ppm: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    turbidity_ntu: Mapped[float | None] = mapped_column(Float, nullable=True)
+
+    # Hardware diagnostics
+    pulse_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    distance_raw_cm: Mapped[float | None] = mapped_column(Float, nullable=True)
+    tds_voltage_mv: Mapped[float | None] = mapped_column(Float, nullable=True)
+    turbidity_voltage_mv: Mapped[float | None] = mapped_column(Float, nullable=True)
+    rssi_dbm: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    uptime_seconds: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    free_heap_bytes: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+    # Hardware error codes
+    sensor_errors: Mapped[list] = mapped_column(JSON, default=list)
+
+    # Raw verbatim JSON payload for traceability
+    raw_payload: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+
+    building: Mapped[Building] = relationship(back_populates="raw_water_telemetry")

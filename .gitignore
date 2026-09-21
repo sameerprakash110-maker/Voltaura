@@ -35,3 +35,7 @@ Thumbs.db
 
 # build artefact
 frontend/tsconfig.tsbuildinfo
+
+# --- Hardware & Firmware Secrets ---
+hardware/esp32/secrets.h
+!hardware/esp32/secrets.example.h
