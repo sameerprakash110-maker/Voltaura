@@ -366,47 +366,6 @@ export interface AnomalyDetail {
   };
 }
 
-export interface InvestigationHypothesis {
-  name: string;
-  status?: string | null;
-  confidence: number;
-  reasoning: string;
-}
-
-export interface InvestigationEvidence {
-  label: string;
-  value: unknown;
-  meaning: string;
-  hypothesis?: string;
-}
-
-export interface InvestigationUnknown {
-  label: string;
-  status?: string | null;
-  why_it_matters: string;
-}
-
-export interface InvestigationProbe {
-  tool: string;
-  arguments: Record<string, unknown>;
-  status?: string | null;
-  selector: string;
-}
-
-export interface InvestigationResponse {
-  anomaly_id: number;
-  resource: string | null;
-  hypotheses: InvestigationHypothesis[];
-  supporting_evidence: InvestigationEvidence[];
-  contradictions: InvestigationEvidence[];
-  unknowns: InvestigationUnknown[];
-  probes_taken?: InvestigationProbe[];
-  next_probe: Record<string, unknown> | null;
-  events?: Array<Record<string, unknown>>;
-  status?: string | null;
-  investigation_summary?: string | null;
-}
-
 export interface ReportSummary {
   generated_at: string;
   period_start: string | null;
