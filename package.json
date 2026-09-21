@@ -1,0 +1,15 @@
+{
+  "name": "ecotwin",
+  "version": "1.0.0",
+  "private": true,
+  "description": "EcoTwin - See Waste. Understand Why. Prove the Savings.",
+  "scripts": {
+    "setup": "pip install -r backend/requirements.txt && npm --prefix frontend install && npm run seed",
+    "seed": "python scripts/seed.py",
+    "backend": "python -m uvicorn app.main:app --reload --app-dir backend --port 8000",
+    "frontend": "npm --prefix frontend run dev",
+    "build": "npm --prefix frontend run build",
+    "export-data": "python scripts/export_dataset.py",
+    "test": "python scripts/acceptance_test.py"
+  }
+}

@@ -1,0 +1,37 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+
+# --- environment ---
+.env
+.env.local
+!backend/.env.example
+!frontend/.env.example
+
+# --- data (regenerate with: python scripts/seed.py) ---
+data/*.db
+data/*.db-wal
+data/*.db-shm
+data/exports/
+
+# --- Node / Next.js ---
+node_modules/
+.next/
+out/
+frontend/.env.local
+next-env.d.ts
+*.tsbuildinfo
+
+# --- OS / editors ---
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# build artefact
+frontend/tsconfig.tsbuildinfo

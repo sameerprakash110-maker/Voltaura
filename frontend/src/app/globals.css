@@ -1,0 +1,233 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * EcoTwin visual language.
+ *
+ * Dark is the default because this is an operations surface that sits on a
+ * wall. Light exists as a first-class alternative for printing and daylight
+ * demos. Both themes define the same token names, so no component branches on
+ * theme.
+ */
+@layer base {
+  :root,
+  [data-theme="dark"] {
+    --canvas: 6 12 11;
+    --surface: 12 20 19;
+    --elevated: 18 28 26;
+    --line: 255 255 255;
+    --line-strong: 255 255 255;
+
+    --ink: 232 240 238;
+    --ink-soft: 150 170 165;
+    --ink-muted: 102 124 119;
+
+    --mint: 52 229 160;
+    --mint-deep: 22 163 112;
+    --aqua: 69 199 232;
+    --aqua-deep: 24 150 184;
+    --iris: 157 140 255;
+
+    --low: 127 168 160;
+    --medium: 245 185 74;
+    --high: 255 155 84;
+    --critical: 255 107 107;
+
+    --line-alpha: 0.09;
+    --line-strong-alpha: 0.16;
+    color-scheme: dark;
+  }
+
+  [data-theme="light"] {
+    --canvas: 246 248 247;
+    --surface: 255 255 255;
+    --elevated: 255 255 255;
+    --line: 15 35 30;
+    --line-strong: 15 35 30;
+
+    --ink: 14 30 26;
+    --ink-soft: 78 100 95;
+    --ink-muted: 120 140 135;
+
+    --mint: 13 148 96;
+    --mint-deep: 8 110 71;
+    --aqua: 12 137 172;
+    --aqua-deep: 8 105 133;
+    --iris: 104 82 224;
+
+    --low: 106 140 133;
+    --medium: 190 133 12;
+    --high: 200 106 32;
+    --critical: 208 54 54;
+
+    --line-alpha: 0.1;
+    --line-strong-alpha: 0.18;
+    color-scheme: light;
+  }
+
+  * {
+    border-color: rgb(var(--line) / var(--line-alpha));
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-canvas text-ink font-sans antialiased;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  /* Numeric readouts line up in columns and never jitter as values tick. */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+  }
+
+  ::selection {
+    background: rgb(var(--mint) / 0.25);
+    color: rgb(var(--ink));
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgb(var(--line) / 0.16);
+    border-radius: 999px;
+    border: 3px solid transparent;
+    background-clip: content-box;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgb(var(--line) / 0.28);
+    background-clip: content-box;
+  }
+
+  :focus-visible {
+    outline: 2px solid rgb(var(--mint) / 0.75);
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  /* The panel is the single structural primitive the whole product is built
+     from: a hairline border over a barely-raised surface. */
+  .panel {
+    @apply rounded-panel border bg-surface/70;
+    border-color: rgb(var(--line) / var(--line-alpha));
+    backdrop-filter: blur(12px);
+  }
+
+  .panel-flat {
+    @apply rounded-card border bg-surface/50;
+    border-color: rgb(var(--line) / var(--line-alpha));
+  }
+
+  .hairline {
+    border-color: rgb(var(--line) / var(--line-alpha));
+  }
+
+  .eyebrow {
+    @apply text-2xs font-medium uppercase tracking-[0.16em] text-ink-muted;
+  }
+
+  .num {
+    @apply font-mono tabular;
+  }
+
+  /* Ambient field behind the app shell. Two soft radial washes plus a faint
+     grid: enough to feel engineered, quiet enough to read data over. */
+  .ambient::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background:
+      radial-gradient(60rem 40rem at 82% -8%, rgb(var(--mint) / 0.07), transparent 62%),
+      radial-gradient(48rem 34rem at 4% 8%, rgb(var(--aqua) / 0.055), transparent 60%);
+  }
+
+  .ambient::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background-image:
+      linear-gradient(to right, rgb(var(--line) / 0.05) 1px, transparent 1px),
+      linear-gradient(to bottom, rgb(var(--line) / 0.05) 1px, transparent 1px);
+    background-size: 64px 64px;
+    mask-image: radial-gradient(70rem 50rem at 50% 0%, black, transparent 78%);
+  }
+
+  .shimmer {
+    position: relative;
+    overflow: hidden;
+  }
+  .shimmer::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    width: 38%;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgb(var(--line) / 0.09),
+      transparent
+    );
+    animation: sweep 2.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  }
+
+  .divider-y {
+    @apply border-t;
+    border-color: rgb(var(--line) / var(--line-alpha));
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+  .text-pretty {
+    text-wrap: pretty;
+  }
+
+  /* Recharts overrides: the library's defaults are far too loud. */
+  .recharts-cartesian-axis-tick text {
+    fill: rgb(var(--ink-muted));
+    font-size: 11px;
+    font-family: var(--font-mono);
+  }
+  .recharts-cartesian-grid line {
+    stroke: rgb(var(--line) / 0.07);
+  }
+  .recharts-curve.recharts-tooltip-cursor {
+    stroke: rgb(var(--line) / 0.22);
+  }
+  .recharts-rectangle.recharts-tooltip-cursor {
+    fill: rgb(var(--line) / 0.05);
+  }
+  .recharts-surface {
+    overflow: visible;
+  }
+  .recharts-legend-item-text {
+    color: rgb(var(--ink-soft)) !important;
+    font-size: 12px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
