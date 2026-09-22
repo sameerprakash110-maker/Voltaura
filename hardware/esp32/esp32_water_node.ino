@@ -292,6 +292,10 @@ void loop() {
             Serial.printf("  Distance: %.1f cm\n", rawDistanceCm);
             Serial.printf("  Water Height: %.1f cm\n", levelCm);
             Serial.printf("  Water Level: %.1f %%\n", levelPct);
+            if (levelPct < Config::WATER_LEVEL_LOW_ALERT_THRESHOLD_PCT) {
+                Serial.printf("  [ALERT] Critical Low Water Level: %.1f%% (< %.0f%% threshold) - REFILL REQUIRED!\n",
+                              levelPct, Config::WATER_LEVEL_LOW_ALERT_THRESHOLD_PCT);
+            }
         } else {
             Serial.println("  Measurement timeout / invalid");
             Serial.println("  Water level unavailable (null)");

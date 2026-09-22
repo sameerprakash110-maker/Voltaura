@@ -91,6 +91,9 @@ namespace Config {
     // Usable tank capacity in Liters (placeholder reference).
     constexpr float TANK_CAPACITY_LITERS = 1000.0f;
 
+    // Tank low-level safety alert threshold percentage (< 20% triggers alert)
+    constexpr float WATER_LEVEL_LOW_ALERT_THRESHOLD_PCT = 20.0f;
+
     // Ultrasonic operational limits & median filtering configuration
     constexpr float ULTRASONIC_MIN_DISTANCE_CM = 2.0f;         // Physical minimum range (~2 cm)
     constexpr float ULTRASONIC_MAX_DISTANCE_CM = 400.0f;       // Physical maximum reliable range (~400 cm)

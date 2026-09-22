@@ -32,6 +32,7 @@ export function SensorHealthGrid({ telemetry, className }: SensorHealthGridProps
   // Determine individual sensor health from errors & values
   const hasUltrasonicError = errors.some((e) => e.startsWith("E_ULTRASONIC"));
   const ultrasonicOk = !hasUltrasonicError && telemetry.water_level_pct !== null;
+  const isLowWater = telemetry.water_level_pct !== null && telemetry.water_level_pct !== undefined && telemetry.water_level_pct < 20.0;
 
   const hasFlowError = errors.some((e) => e.startsWith("E_FLOW"));
   const flowOk = !hasFlowError && telemetry.flow_rate_lpm !== null;
@@ -45,16 +46,28 @@ export function SensorHealthGrid({ telemetry, className }: SensorHealthGridProps
   const hasRssi = telemetry.rssi_dbm !== null && telemetry.rssi_dbm !== undefined;
   const isOnline = true; // Telemetry arrived from backend
 
+  const totalAlertCount = errors.length + (isLowWater ? 1 : 0);
+
   return (
     <div className={cn("space-y-3", className)}>
-      {/* Sensor Error Warnings */}
-      {errors.length > 0 ? (
-        <div className="rounded-lg border border-critical/30 bg-critical/10 p-3 text-xs">
+      {/* Sensor Error & Water Level Warnings */}
+      {totalAlertCount > 0 ? (
+        <div className="rounded-lg border border-critical/35 bg-critical/10 p-3 text-xs shadow-sm">
           <div className="flex items-center gap-2 font-semibold text-critical">
-            <AlertTriangle className="size-4 shrink-0" />
-            <span>Active Sensor Diagnostics Alert ({errors.length})</span>
+            <AlertTriangle className="size-4 shrink-0 animate-pulse" />
+            <span>Active Subsystem & Safety Alert ({totalAlertCount})</span>
           </div>
-          <ul className="mt-2 space-y-1 pl-6 list-disc text-ink-soft">
+          <ul className="mt-2 space-y-1.5 pl-6 list-disc text-ink-soft">
+            {isLowWater && (
+              <li>
+                <span className="font-mono text-[11px] font-semibold text-critical mr-1">
+                  CRITICAL_WATER_LEVEL:
+                </span>
+                <span className="text-critical font-medium">
+                  Tank level has dropped to {telemetry.water_level_pct?.toFixed(1)}% (below 20.0% safety threshold). Reservoir replenishment required.
+                </span>
+              </li>
+            )}
             {errors.map((err, idx) => (
               <li key={idx}>
                 <span className="font-mono text-[11px] font-semibold text-critical mr-1">
@@ -84,9 +97,9 @@ export function SensorHealthGrid({ telemetry, className }: SensorHealthGridProps
         <StatusItem
           label="HC-SR04"
           icon={Waves}
-          status={ultrasonicOk ? "OK" : hasUltrasonicError ? "Error" : "Timeout"}
-          isGood={ultrasonicOk}
-          subtext="Ultrasonic Level"
+          status={!ultrasonicOk ? (hasUltrasonicError ? "Error" : "Timeout") : isLowWater ? "Alert (<20%)" : "OK"}
+          isGood={ultrasonicOk && !isLowWater}
+          subtext={isLowWater ? `${telemetry.water_level_pct?.toFixed(1)}% (Low Reserve)` : "Ultrasonic Level"}
         />
 
         {/* YF-S201 Flow */}

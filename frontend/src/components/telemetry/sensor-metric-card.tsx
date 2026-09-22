@@ -3,6 +3,7 @@
 import {
   Activity,
   AlertCircle,
+  AlertTriangle,
   CheckCircle2,
   Droplets,
   Gauge,
@@ -27,6 +28,8 @@ export interface SensorMetricCardProps {
   hasError?: boolean;
   errorMessage?: string;
   progressPct?: number | null;
+  isAlert?: boolean;
+  alertMessage?: string;
   className?: string;
 }
 
@@ -48,10 +51,17 @@ export function SensorMetricCard({
   hasError = false,
   errorMessage,
   progressPct,
+  isAlert = false,
+  alertMessage,
   className,
 }: SensorMetricCardProps) {
   const isPrimaryNull = primaryValue === null || primaryValue === undefined;
   const isPrimaryZero = primaryValue === 0;
+
+  // Active alert condition: explicitly passed or water_level is below 20%
+  const isLowWaterAlert =
+    isAlert ||
+    (!isPrimaryNull && metricKey === "water_level" && typeof primaryValue === "number" && primaryValue < 20.0);
 
   // Determine icon and theme tone
   const config = React.useMemo(() => {
@@ -59,9 +69,9 @@ export function SensorMetricCard({
       case "water_level":
         return {
           icon: Waves,
-          color: "text-aqua",
-          borderHover: "hover:border-aqua/30",
-          progressColor: "bg-aqua",
+          color: isLowWaterAlert ? "text-critical" : "text-aqua",
+          borderHover: isLowWaterAlert ? "hover:border-critical/50" : "hover:border-aqua/30",
+          progressColor: isLowWaterAlert ? "bg-critical animate-pulse" : "bg-aqua",
         };
       case "flow_rate":
         return {
@@ -85,7 +95,7 @@ export function SensorMetricCard({
           progressColor: "bg-high",
         };
     }
-  }, [metricKey]);
+  }, [metricKey, isLowWaterAlert]);
 
   const Icon = config.icon;
 
@@ -105,6 +115,7 @@ export function SensorMetricCard({
         "relative flex flex-col justify-between rounded-xl border border-[rgb(var(--line)/0.12)] bg-surface/80 p-4 transition-all duration-150 backdrop-blur-sm",
         config.borderHover,
         hasError && "border-critical/35 bg-critical/5",
+        isLowWaterAlert && "border-critical/60 bg-critical/10 ring-1 ring-critical/30 shadow-[0_0_15px_-3px_rgba(239,68,68,0.2)]",
         className,
       )}
     >
@@ -115,6 +126,10 @@ export function SensorMetricCard({
           {hasError ? (
             <Badge tone="critical" className="gap-1 px-1.5 py-0.5 text-[10px]">
               <AlertCircle className="size-3" /> Error
+            </Badge>
+          ) : isLowWaterAlert ? (
+            <Badge tone="critical" pulse className="gap-1 px-1.5 py-0.5 text-[10px] font-bold">
+              <AlertTriangle className="size-3 animate-pulse" /> Alert &lt; 20%
             </Badge>
           ) : isPrimaryNull ? (
             <Badge tone="neutral" className="gap-1 px-1.5 py-0.5 text-[10px]">
@@ -141,11 +156,14 @@ export function SensorMetricCard({
               className={cn(
                 "num text-2xl font-bold tracking-tight text-ink",
                 isPrimaryZero && "text-ink-soft",
+                isLowWaterAlert && "text-critical",
               )}
             >
               {formattedPrimary}
             </span>
-            <span className="text-xs font-normal text-ink-muted">{primaryUnit}</span>
+            <span className={cn("text-xs font-normal text-ink-muted", isLowWaterAlert && "text-critical/80")}>
+              {primaryUnit}
+            </span>
           </div>
         )}
 
@@ -164,6 +182,11 @@ export function SensorMetricCard({
       <div className="mt-3 border-t border-[rgb(var(--line)/0.08)] pt-2 text-[11px] text-ink-muted">
         {hasError && errorMessage ? (
           <span className="text-critical">{errorMessage}</span>
+        ) : isLowWaterAlert ? (
+          <div className="flex items-center gap-1.5 font-medium text-critical">
+            <AlertTriangle className="size-3 shrink-0" />
+            <span>{alertMessage || "Critical: Water level below 20%! Refill required."}</span>
+          </div>
         ) : secondaryValue !== undefined && secondaryValue !== null ? (
           <div className="flex items-center justify-between">
             <span>{secondaryLabel || "Secondary"}:</span>
