@@ -72,6 +72,16 @@ def get_building(
         .where(Intervention.building_id == building_id)
         .order_by(Intervention.implemented_at.desc())
     ).scalars().all()
+    intervention_recommendations = {
+        r.id: r for r in db.execute(
+            select(Recommendation).where(Recommendation.id.in_([
+                i.recommendation_id for i in interventions if i.recommendation_id
+            ]))
+        ).scalars()
+    } if interventions else {}
+    intervention_verifications = verification_service.latest_by_intervention(
+        db, [i.id for i in interventions]
+    )
 
     severity_by_anomaly = {a.id: a.severity for a in anomalies}
     rec_by_anomaly = {r.anomaly_id: r for r in recommendations if r.anomaly_id}
@@ -79,8 +89,8 @@ def get_building(
     intervention_out = []
     for iv in interventions:
         progress = intervention_service.monitoring_progress(db, iv)
-        rec = db.get(Recommendation, iv.recommendation_id) if iv.recommendation_id else None
-        ver = verification_service.latest_for_intervention(db, iv.id)
+        rec = intervention_recommendations.get(iv.recommendation_id)
+        ver = intervention_verifications.get(iv.id)
         intervention_out.append(intervention_payload(iv, buildings, progress, rec, ver))
 
     # ---- subsystem cards ----------------------------------------------

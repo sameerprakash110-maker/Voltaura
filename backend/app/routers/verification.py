@@ -19,25 +19,37 @@ def list_verifications(
     building_id: int | None = Query(None),
     status: str = Query("ALL"),
     latest_only: bool = Query(True, description="One result per intervention"),
+    intervention_id: int | None = Query(None),
     db: Session = Depends(get_db),
 ) -> list[VerificationOut]:
     """Verification results, newest first."""
     if latest_only:
-        results = verification_service.latest_per_intervention(db)
+        results = (
+            list(verification_service.latest_by_intervention(db, [intervention_id]).values())
+            if intervention_id is not None
+            else verification_service.latest_per_intervention(db)
+        )
     else:
         results = db.execute(
             select(VerificationResult).order_by(VerificationResult.created_at.desc())
         ).scalars().all()
 
+    if intervention_id is not None and not latest_only:
+        results = [r for r in results if r.intervention_id == intervention_id]
     if building_id is not None:
         results = [r for r in results if r.building_id == building_id]
     if status != "ALL":
         results = [r for r in results if r.status == status]
 
     buildings = building_lookup(db)
+    interventions = {
+        i.id: i for i in db.execute(
+            select(Intervention).where(Intervention.id.in_([r.intervention_id for r in results]))
+        ).scalars()
+    } if results else {}
     return [
         VerificationOut(**verification_payload(
-            r, buildings, db.get(Intervention, r.intervention_id)))
+            r, buildings, interventions.get(r.intervention_id)))
         for r in results
     ]
 
