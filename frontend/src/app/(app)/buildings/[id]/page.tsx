@@ -18,6 +18,7 @@ import {
   type ActualExpectedPoint,
 } from "@/components/charts/primitives";
 import { useAppState } from "@/components/providers/app-state";
+import { LiveTelemetryPanel } from "@/components/telemetry/live-telemetry-panel";
 import {
   Button,
   EmptyState,
@@ -217,6 +218,9 @@ export default function BuildingDetailPage() {
           />
         </div>
       </Section>
+
+      {/* ================= live edge telemetry ================= */}
+      <LiveTelemetryPanel initialBuildingId={id} showBuildingSelector={false} />
 
       {/* ================= resource performance ================= */}
       <Section

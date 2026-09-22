@@ -24,6 +24,7 @@ import {
 } from "@/components/charts/primitives";
 import { PipelineRail } from "@/components/layout/pipeline-rail";
 import { useAppState } from "@/components/providers/app-state";
+import { LiveTelemetryPanel } from "@/components/telemetry/live-telemetry-panel";
 import {
   Button,
   EmptyState,
@@ -166,6 +167,10 @@ export default function DashboardPage() {
           <Skeleton className="h-20 w-full" />
         )}
       </Section>
+
+      {/* ================= live edge telemetry ================= */}
+      {/* Carries its own header, so it sits directly on the page. */}
+      <LiveTelemetryPanel />
 
       {/* ================= telemetry ================= */}
       <Section

@@ -95,6 +95,8 @@ class Settings(BaseSettings):
     @property
     def gemini_available(self) -> bool:
         return bool(self.gemini_api_key)
+
+    @property
     def authorized_devices(self) -> dict[str, dict[str, any]]:
         import json
         registry: dict[str, dict[str, any]] = {
