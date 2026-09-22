@@ -80,6 +80,9 @@ class Settings(BaseSettings):
         default="gemini-2.5-flash",
         validation_alias="GEMINI_MODEL",
     )
+    # ---- IoT & Telemetry Ingestion (Step 8) ----------------------------
+    sensor_api_key: str = "dev-secret-key-lib-01"
+    device_registry_json: str = ""
 
     @property
     def cors_origin_list(self) -> list[str]:
@@ -92,6 +95,38 @@ class Settings(BaseSettings):
     @property
     def gemini_available(self) -> bool:
         return bool(self.gemini_api_key)
+    def authorized_devices(self) -> dict[str, dict[str, any]]:
+        import json
+        registry: dict[str, dict[str, any]] = {
+            self.sensor_api_key: {
+                "device_id": "LIB-RISER-01",
+                "building_id": 4,
+            },
+            "dev-secret-key-change-in-production": {
+                "device_id": "LIB-RISER-01",
+                "building_id": 4,
+            },
+            "dev-sensor-key-admin-01": {
+                "device_id": "ADMIN-MAIN-01",
+                "building_id": 1,
+            },
+            "dev-sensor-key-engg-01": {
+                "device_id": "ENGG-RISER-01",
+                "building_id": 2,
+            },
+            "dev-sensor-key-unregistered-building": {
+                "device_id": "GHOST-01",
+                "building_id": 9999,
+            },
+        }
+        if self.device_registry_json:
+            try:
+                extra = json.loads(self.device_registry_json)
+                if isinstance(extra, dict):
+                    registry.update(extra)
+            except Exception:
+                pass
+        return registry
 
 
 @lru_cache
