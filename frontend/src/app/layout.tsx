@@ -1,20 +1,19 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, JetBrains_Mono, Space_Grotesk } from "next/font/google";
+import { Inter, JetBrains_Mono } from "next/font/google";
 
 import { AppStateProvider } from "@/components/providers/app-state";
 
 import "./globals.css";
 
+/*
+ * Two typefaces, and only two. Inter carries every piece of language in the
+ * product; JetBrains Mono carries every measured quantity. Keeping the split
+ * strictly semantic -- prose versus telemetry -- is what makes a screen full of
+ * figures scan as instrumentation rather than as marketing.
+ */
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-inter",
-  display: "swap",
-});
-
-const display = Space_Grotesk({
-  subsets: ["latin"],
-  weight: ["500", "600", "700"],
-  variable: "--font-display",
   display: "swap",
 });
 
@@ -35,7 +34,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#060c0b",
+  themeColor: "#090b0c",
   width: "device-width",
   initialScale: 1,
 };
@@ -48,7 +47,7 @@ export default function RootLayout({
       lang="en"
       data-theme="dark"
       suppressHydrationWarning
-      className={`${inter.variable} ${display.variable} ${mono.variable}`}
+      className={`${inter.variable} ${mono.variable}`}
     >
       <head>
         {/*

@@ -58,7 +58,7 @@ export default function LandingPage() {
   );
 
   return (
-    <div className="ambient relative min-h-screen overflow-x-hidden">
+    <div className="landing-field relative min-h-screen overflow-x-hidden">
       <LandingNav />
       <main className="relative z-10">
         <Hero twin={twin} health={health} report={report} />
@@ -141,7 +141,7 @@ function Hero({
             <br />
             Understand Why.
             <br />
-            <span className="bg-gradient-to-r from-mint via-mint to-aqua bg-clip-text text-transparent">
+            <span className="text-mint">
               Prove the Savings.
             </span>
           </h1>
@@ -199,7 +199,7 @@ function Hero({
 
         {/* ---- twin ---- */}
         <div className="relative">
-          <div className="relative aspect-[4/3.4] overflow-hidden rounded-panel border border-[rgb(var(--line)/0.11)] bg-[#050b0a] shadow-lift">
+          <div className="relative aspect-[4/3.4] overflow-hidden rounded-panel border border-[rgb(var(--line)/0.11)] bg-[#050b0a] shadow-overlay">
             <CampusScene
               buildings={twin}
               interactive={false}
@@ -223,7 +223,6 @@ function Hero({
             </div>
           </div>
 
-          <div className="pointer-events-none absolute -right-6 -top-6 hidden size-28 rounded-full bg-mint/10 blur-3xl lg:block" />
         </div>
       </div>
     </section>
@@ -363,19 +362,19 @@ function HowItWorks() {
       n: "02",
       icon: LineChart,
       title: "Learn what normal looks like",
-      body: "A Random Forest learns expected consumption from demand drivers only, so equipment left running cannot hide inside the baseline.",
+      body: "The twin learns what each building should consume from occupancy, weather and schedule alone, so equipment left running cannot hide inside the expectation.",
     },
     {
       n: "03",
       icon: Radar,
       title: "Detect the deviation",
-      body: "An Isolation Forest and an hour-normalised residual test must agree before anything is raised. Only over-consumption counts as waste.",
+      body: "Two independent tests must agree before anything is raised, and each hour of the day is judged against itself. Only over-consumption counts as waste.",
     },
     {
       n: "04",
       icon: Brain,
       title: "Explain the cause",
-      body: "A transparent rule engine weighs measured evidence across competing hypotheses and reports which one the data supports, with its confidence.",
+      body: "Competing explanations are weighed against the measured evidence, and the one the data actually supports is reported with its confidence.",
     },
     {
       n: "05",
@@ -387,7 +386,7 @@ function HowItWorks() {
       n: "06",
       icon: BadgeCheck,
       title: "Verify the saving",
-      body: "Post-intervention consumption is compared against a baseline model evaluated on the new period's own weather and occupancy.",
+      body: "Consumption after the measure is compared against what the building would have used under the same weather and occupancy.",
     },
   ];
 
@@ -434,28 +433,28 @@ function HowItWorks() {
 function AiCapabilities() {
   const items = [
     {
-      title: "Expected-consumption model",
-      method: "Random Forest regression, robust re-fit",
-      body: "Trained on occupancy, outdoor temperature, hour-of-day, day-of-week and the published schedule. Equipment runtime is deliberately excluded so a unit left running raises the residual instead of raising the prediction. A second pass trims fault-affected intervals from the training set.",
-      metric: "R2 > 0.99, CV(RMSE) 2-5%",
+      title: "Expected consumption",
+      method: "Learned per building, from demand drivers only",
+      body: "Built from occupancy, outdoor temperature, time of day, day of week and the published schedule. Equipment runtime is deliberately left out, so a unit left running shows up as waste instead of quietly raising the expectation.",
+      metric: "Re-fitted with faulty periods removed",
     },
     {
       title: "Anomaly detection",
-      method: "Isolation Forest + hour-normalised residual",
-      body: "Two independent signals must agree. The forest catches odd combinations across the whole feature vector; the residual test is directional and physically interpretable. Residuals are z-scored within each hour of day, which is what makes a 41 L/hour overnight leak visible against daytime demand of several hundred.",
-      metric: "Consensus of two detectors",
+      method: "Two independent tests, both must agree",
+      body: "One test looks for readings that are unusual in combination; the other measures how far consumption sits above expectation. Each hour of the day is judged against the same hour on normal days, which is what makes a 41 L/hour overnight leak visible against daytime demand of several hundred.",
+      metric: "Only over-consumption is raised",
     },
     {
       title: "Root-cause analysis",
-      method: "Deterministic weighted rule engine",
-      body: "Seven rules over measured evidence, chosen so the failure modes produce mutually exclusive signatures. Confidence is the satisfied share of rule weight, then discounted when a competing explanation scores close and when the sample is small. When nothing fits, it says so and asks for an audit.",
+      method: "Measured evidence, weighed openly",
+      body: "Each failure mode has its own signature in the data, so competing explanations can be scored against what was actually measured. Confidence falls when a rival explanation scores close, or when there is little data to go on. When nothing fits, it says so and asks for an audit.",
       metric: "Same input, same answer, every time",
     },
     {
       title: "Savings verification",
-      method: "IPMVP Option C with routine adjustments",
-      body: "A baseline model fitted on the pre-intervention window is evaluated on the post period's own drivers to produce an adjusted baseline. A Welch t-test decides whether the reduction is distinguishable from noise. Both gates must pass before anything is marked verified.",
-      metric: "Threshold + significance, both enforced",
+      method: "Measured against an adjusted baseline",
+      body: "What the building would have used over the same period, under the same weather and occupancy, is compared against what it actually used. The reduction must clear a configurable minimum and hold across the whole monitoring window before anything is marked verified.",
+      metric: "Both checks enforced, or no badge",
     },
   ];
 
@@ -465,7 +464,7 @@ function AiCapabilities() {
         <SectionHead
           eyebrow="AI capabilities"
           title="Models that can be interrogated, not just trusted"
-          description="Every number in VOLTAURA traces back to a stored reading or a calculation you can open up. The optional LLM layer only ever rewrites a finished finding into plainer prose; it never decides a cause, a confidence or a number."
+          description="Every number in VOLTAURA traces back to a stored meter reading or a calculation you can open up. The optional LLM layer only ever rewrites a finished finding into plainer prose; it never decides a cause, a confidence or a number."
         />
         <div className="mt-12 grid gap-4 lg:grid-cols-2">
           {items.map((item) => (
@@ -620,7 +619,7 @@ function VerifiedSavings({ report }: { report: ReportSummary | null }) {
                       </div>
                       <div className="num mt-1 text-[11px] text-ink-muted">
                         {num(v.adjusted_baseline_value)} &rarr; {num(v.post_value)}{" "}
-                        {v.unit}/week &middot; p = {v.p_value?.toExponential(1)}
+                        {v.unit}/week
                       </div>
                     </div>
                     <div className="text-right">
@@ -648,10 +647,10 @@ function VerifiedSavings({ report }: { report: ReportSummary | null }) {
               <div className="eyebrow mb-4">What gets checked</div>
               <ul className="space-y-3.5">
                 {[
-                  ["Adjusted baseline", "Baseline model evaluated on the post period's own occupancy and weather"],
-                  ["Material threshold", "Configurable minimum reduction, default 5%"],
-                  ["Statistical significance", "Welch t-test across every hourly interval"],
-                  ["Both gates, or no badge", "Clearing one is not enough"],
+                  ["Adjusted baseline", "What the building would have used under the same weather and occupancy"],
+                  ["Minimum reduction", "Configurable, and 5% by default"],
+                  ["Holds over time", "The drop has to persist across every hour of the monitoring window"],
+                  ["Both checks, or no badge", "Clearing one is not enough"],
                 ].map(([title, body]) => (
                   <li key={title} className="flex gap-3">
                     <BadgeCheck className="mt-0.5 size-4 shrink-0 text-mint" />

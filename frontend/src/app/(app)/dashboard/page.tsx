@@ -1,55 +1,63 @@
 "use client";
 
-import {
-  ArrowRight,
-  BadgeCheck,
-  Droplets,
-  Lightbulb,
-  Radar,
-  RefreshCw,
-  Wrench,
-  Zap,
-} from "lucide-react";
+import { ArrowRight, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
 
+import { AnomalyTable, SeverityBar } from "@/components/domain/anomaly-table";
+import { BuildingComparison } from "@/components/domain/building-comparison";
+import { RecommendationList } from "@/components/domain/recommendation-list";
 import {
-  AnomalyCard,
-  InterventionCard,
-  RecommendationCard,
-  VerificationSummary,
-} from "@/components/cards/domain-cards";
-import { KpiCard } from "@/components/cards/kpi-card";
-import { CampusChart, ComparisonBars } from "@/components/charts/primitives";
+  CampusHeadline,
+  ResourceSummary,
+  kpiValue,
+} from "@/components/domain/resource-summary";
+import {
+  VerificationTable,
+  VerifiedImpact,
+} from "@/components/domain/verification";
+import {
+  CHART_COLOURS,
+  CampusChart,
+  ChartFrame,
+  LegendKey,
+} from "@/components/charts/primitives";
 import { PipelineRail } from "@/components/layout/pipeline-rail";
 import { useAppState } from "@/components/providers/app-state";
 import {
-  Badge,
   Button,
   EmptyState,
   ErrorState,
   LoadingPanel,
-  Panel,
-  PanelHeader,
   Segmented,
   Skeleton,
 } from "@/components/ui/primitives";
+import { Metric, Section } from "@/components/ui/structure";
 import { api } from "@/lib/api";
-import { compact, dateTime, num, pct, signedPct } from "@/lib/format";
+import { dateTime, num, telemetryStamp } from "@/lib/format";
 import type { Dashboard, Recommendation } from "@/lib/types";
 import { useApi, useMutation } from "@/lib/use-api";
-import { cn } from "@/lib/utils";
 
+/**
+ * Campus command centre.
+ *
+ * Read top to bottom this page answers, in order: what is the campus consuming,
+ * how far has the loop carried today's findings, what does the telemetry look
+ * like against the model, which blocks are driving the load, what is open, what
+ * should be done, and what has already been proved. Every figure comes from
+ * /api/dashboard exactly as the backend computed it.
+ */
 export default function DashboardPage() {
   const { range, resource } = useAppState();
   const { data, error, loading, refetch } = useApi<Dashboard>(
     `/api/dashboard?days=${range}&resource=${resource}`,
     [range, resource],
   );
+
   const [chartResource, setChartResource] = React.useState<"ALL" | "ENERGY" | "WATER">(
     "ALL",
   );
-  const [comparisonMetric, setComparisonMetric] = React.useState<
+  const [loadMetric, setLoadMetric] = React.useState<
     "energy_kwh" | "water_liters" | "energy_intensity"
   >("energy_kwh");
 
@@ -65,447 +73,328 @@ export default function DashboardPage() {
 
   if (error && !data) {
     return (
-      <div className="pt-10">
+      <div className="pt-8">
         <ErrorState error={error} onRetry={() => refetch()} />
       </div>
     );
   }
 
   const symbol = data?.economics.currency_symbol ?? "₹";
+  const savingsKpi = data?.kpis.find((kpi) => kpi.key === "savings");
+  const anomalyKpi = data?.kpis.find((kpi) => kpi.key === "anomalies");
+  const verifiedStage = data?.pipeline.stages.find((stage) => stage.key === "verify");
+  const headlineVerification =
+    data?.verifications.find((v) => v.status === "VERIFIED") ?? null;
 
   return (
-    <div className="space-y-5">
-      {/* ---- header ------------------------------------------------ */}
-      <header className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <div className="eyebrow mb-1.5">Sustainability command centre</div>
-          <h1 className="font-display text-2xl font-semibold tracking-tight text-ink">
-            Campus overview
+    <div className="space-y-9">
+      {/* ================= hero ================= */}
+      <header className="flex flex-wrap items-start justify-between gap-x-10 gap-y-5">
+        <div className="min-w-0">
+          <div className="label">VOLTAURA</div>
+          <h1 className="mt-2 text-[26px] font-semibold leading-none tracking-[-0.03em] text-ink">
+            Campus Command Centre
           </h1>
-          <p className="mt-1.5 text-[13px] text-ink-muted">
+          <p className="mt-2.5 max-w-xl text-[12.5px] leading-relaxed text-ink-muted">
+            Real-time resource intelligence across the RIT campus.
+          </p>
+
+          <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1.5">
+            <span className="label">Telemetry</span>
+            <span className="num text-[11.5px] text-ink-soft">
+              {data ? telemetryStamp(data.data_end) : "— — —"}
+            </span>
             {data ? (
               <>
-                Last {data.range_days} days &middot;{" "}
-                {data.interval === "hour" ? "hourly" : "daily"} resolution &middot;
-                telemetry to{" "}
-                <span className="num">{dateTime(data.data_end)}</span>
+                <span className="h-3 w-px bg-[rgb(var(--line)/0.12)]" />
+                <span className="num text-[11px] text-ink-muted">
+                  last {data.range_days} days ·{" "}
+                  {data.interval === "hour" ? "hourly" : "daily"} resolution
+                </span>
               </>
-            ) : (
-              "Loading telemetry window"
-            )}
-          </p>
+            ) : null}
+          </div>
         </div>
-        <Button
-          variant="secondary"
-          size="sm"
-          loading={loading && !!data}
-          onClick={() => refetch()}
-        >
-          <RefreshCw /> Refresh
-        </Button>
+
+        <div className="flex flex-col items-start gap-4 lg:items-end">
+          <Button
+            variant="secondary"
+            size="sm"
+            loading={loading && !!data}
+            onClick={() => refetch()}
+          >
+            <RefreshCw /> Refresh
+          </Button>
+          {data ? (
+            <CampusHeadline
+              openAnomalies={Number(anomalyKpi?.value ?? 0)}
+              verifiedInterventions={verifiedStage?.value ?? 0}
+              verifiedSavings={
+                savingsKpi ? `${symbol}${kpiValue(savingsKpi)}` : "—"
+              }
+            />
+          ) : null}
+        </div>
       </header>
 
-      {/* ---- KPIs -------------------------------------------------- */}
-      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-        {data
-          ? data.kpis.map((kpi, index) => (
-              <KpiCard key={kpi.key} kpi={kpi} index={index} />
-            ))
-          : Array.from({ length: 5 }).map((_, i) => (
-              <Panel key={i} className="p-5">
-                <Skeleton className="h-3 w-24" />
-                <Skeleton className="mt-3 h-7 w-20" />
-                <Skeleton className="mt-3 h-3 w-28" />
-              </Panel>
+      {/* ================= resource performance ================= */}
+      <Section label="Resource performance" title="Metered across the campus">
+        {data ? (
+          <ResourceSummary kpis={data.kpis} />
+        ) : (
+          <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-5">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i}>
+                <Skeleton className="h-2.5 w-20" />
+                <Skeleton className="mt-3 h-8 w-24" />
+                <Skeleton className="mt-3 h-2.5 w-28" />
+              </div>
             ))}
-      </section>
+          </div>
+        )}
+      </Section>
 
-      {/* ---- the loop, as live counts ------------------------------ */}
-      {data ? (
-        <section>
+      {/* ================= pipeline ================= */}
+      <Section
+        label="Operational pipeline"
+        title="Detect → Diagnose → Recommend → Intervene → Verify"
+        description="Live counts at each stage of the loop, not a diagram."
+      >
+        {data ? (
           <PipelineRail stages={data.pipeline.stages} active="detect" />
-        </section>
-      ) : null}
+        ) : (
+          <Skeleton className="h-20 w-full" />
+        )}
+      </Section>
 
-      {/* ---- charts ------------------------------------------------ */}
-      <section className="grid items-start gap-4 xl:grid-cols-[1.55fr_1fr]">
-        <Panel>
-          <PanelHeader
-            eyebrow="Campus resource overview"
-            title="Metered consumption against expected"
-            subtitle="The dashed line is what the model expected given occupancy, weather and schedule. The gap is the waste."
-            action={
-              <Segmented
-                size="sm"
-                options={[
-                  { value: "ALL", label: "Both" },
-                  { value: "ENERGY", label: "Energy" },
-                  { value: "WATER", label: "Water" },
-                ]}
-                value={chartResource}
-                onChange={setChartResource}
-              />
-            }
+      {/* ================= telemetry ================= */}
+      <Section
+        label="Resource performance"
+        title="Measured consumption against modelled baseline"
+        description="The dashed line is what the model expected given occupancy, weather and schedule. The gap between the two is the waste."
+        actions={
+          <Segmented
+            size="sm"
+            options={[
+              { value: "ALL", label: "Both" },
+              { value: "ENERGY", label: "Energy" },
+              { value: "WATER", label: "Water" },
+            ]}
+            value={chartResource}
+            onChange={setChartResource}
           />
-          <div className="px-2 pb-4">
-            {data ? (
-              data.series.length ? (
-                <CampusChart
-                  data={data.series as unknown as Array<Record<string, unknown>>}
-                  showEnergy={chartResource !== "WATER"}
-                  showWater={chartResource !== "ENERGY"}
-                  height={300}
-                />
-              ) : (
+        }
+      >
+        <ChartFrame
+          title={
+            chartResource === "WATER"
+              ? "Water · litres"
+              : chartResource === "ENERGY"
+                ? "Energy · kWh"
+                : "Energy kWh (left) · Water litres (right)"
+          }
+          meta={
+            data
+              ? `${dateTime(data.data_start)} — ${dateTime(data.data_end)}`
+              : undefined
+          }
+          legend={
+            <>
+              {chartResource !== "WATER" ? (
+                <LegendKey colour={CHART_COLOURS.energy} label="Energy metered" />
+              ) : null}
+              {chartResource !== "ENERGY" ? (
+                <LegendKey colour={CHART_COLOURS.water} label="Water metered" />
+              ) : null}
+              <LegendKey
+                colour={CHART_COLOURS.expected}
+                label="Model expectation"
+                dashed
+              />
+            </>
+          }
+        >
+          {data ? (
+            data.series.length ? (
+              <CampusChart
+                data={data.series as unknown as Array<Record<string, unknown>>}
+                showEnergy={chartResource !== "WATER"}
+                showWater={chartResource !== "ENERGY"}
+                height={320}
+              />
+            ) : (
+              <div className="px-3">
                 <EmptyState
-                  icon={Zap}
                   title="No telemetry in this window"
                   description="Seed the database to load 90 days of hourly readings."
                 />
-              )
-            ) : (
-              <div className="px-3">
-                <Skeleton className="h-[300px] w-full" />
               </div>
-            )}
-          </div>
-          <ChartLegend resource={chartResource} />
-        </Panel>
+            )
+          ) : (
+            <Skeleton className="h-[320px] w-full" />
+          )}
+        </ChartFrame>
+      </Section>
 
-        <Panel>
-          <PanelHeader
-            eyebrow="Building comparison"
-            title="Where the consumption sits"
-            action={
-              <Segmented
+      {/* ================= building load ================= */}
+      <Section
+        label="Building resource load"
+        title="Where the consumption sits"
+        description="Ranked by the selected metric over the current window. Deviation compares metered consumption against the model's expectation for the same conditions."
+        actions={
+          <Segmented
+            size="sm"
+            options={[
+              { value: "energy_kwh", label: "kWh" },
+              { value: "water_liters", label: "kL" },
+              { value: "energy_intensity", label: "kWh/m²" },
+            ]}
+            value={loadMetric}
+            onChange={setLoadMetric}
+          />
+        }
+      >
+        {data ? (
+          data.buildings.length ? (
+            <BuildingComparison rows={data.buildings} metric={loadMetric} />
+          ) : (
+            <EmptyState
+              title="No buildings"
+              description="Run python scripts/seed.py to create the demo campus."
+              compact
+            />
+          )
+        ) : (
+          <LoadingPanel rows={6} />
+        )}
+      </Section>
+
+      {/* ================= anomalies ================= */}
+      <Section
+        label="Anomaly queue"
+        title="Open deviations from modelled baselines"
+        description="Deviations from each building's expected consumption, grouped into events and diagnosed against the measured evidence."
+        actions={
+          <Button variant="ghost" size="sm" asChild>
+            <Link href="/anomalies">
+              All anomalies <ArrowRight />
+            </Link>
+          </Button>
+        }
+      >
+        {data ? (
+          <>
+            {data.anomalies.length ? (
+              <SeverityBar anomalies={data.anomalies} className="mb-5 max-w-md" />
+            ) : null}
+            <AnomalyTable
+              anomalies={data.anomalies.slice(0, 6)}
+              emptyTitle="No active anomalies"
+              emptyDescription="Every building is tracking its expected-consumption baseline."
+            />
+          </>
+        ) : (
+          <LoadingPanel rows={4} />
+        )}
+      </Section>
+
+      {/* ================= recommendations ================= */}
+      <Section
+        label="Recommended actions"
+        title="Highest-value measures"
+        description="One measure per diagnosed cause, sized from the measured excess and ranked by severity and value."
+        actions={
+          <Button variant="ghost" size="sm" asChild>
+            <Link href="/recommendations">
+              All recommendations <ArrowRight />
+            </Link>
+          </Button>
+        }
+      >
+        {apply.error ? <ErrorState error={apply.error} compact /> : null}
+        {data ? (
+          data.recommendations.length ? (
+            <RecommendationList
+              recommendations={data.recommendations.slice(0, 2)}
+              currencySymbol={symbol}
+              applyingId={apply.pending ? applyingId : null}
+              onApply={async (rec) => {
+                setApplyingId(rec.id);
+                await apply.mutate(rec);
+                setApplyingId(null);
+              }}
+            />
+          ) : (
+            <EmptyState
+              title="No open recommendations"
+              description="Every diagnosed anomaly has already been actioned."
+              compact
+            />
+          )
+        ) : (
+          <LoadingPanel rows={3} />
+        )}
+      </Section>
+
+      {/* ================= verified impact ================= */}
+      <Section
+        label="Verified impact"
+        title="VOLTAURA does not just predict savings. It proves them."
+        description="Consumption after each measure, measured against what the building would have used under the same weather and occupancy. Only a reduction that clears the minimum and holds across the whole monitoring period is marked verified."
+        actions={
+          <Button variant="ghost" size="sm" asChild>
+            <Link href="/verification">
+              Full analysis <ArrowRight />
+            </Link>
+          </Button>
+        }
+      >
+        {data ? (
+          data.verifications.length ? (
+            <div className="space-y-7">
+              {headlineVerification ? (
+                <VerifiedImpact
+                  verification={headlineVerification}
+                  currencySymbol={symbol}
+                />
+              ) : null}
+              <div className="border-t border-[rgb(var(--line)/0.08)] pt-5">
+                <VerificationTable
+                  verifications={data.verifications}
+                  currencySymbol={symbol}
+                />
+              </div>
+            </div>
+          ) : (
+            <EmptyState
+              title="Nothing verified yet"
+              description="Run verification on an intervention once its monitoring period completes."
+              compact
+            />
+          )
+        ) : (
+          <LoadingPanel rows={3} />
+        )}
+      </Section>
+
+      {/* ================= interventions in flight ================= */}
+      {data?.interventions.length ? (
+        <Section label="In flight" title="Interventions under monitoring">
+          <div className="grid gap-x-8 gap-y-5 sm:grid-cols-2 xl:grid-cols-4">
+            {data.interventions.slice(0, 4).map((intervention) => (
+              <Metric
+                key={intervention.id}
                 size="sm"
-                options={[
-                  { value: "energy_kwh", label: "kWh" },
-                  { value: "water_liters", label: "L" },
-                  { value: "energy_intensity", label: "kWh/m2" },
-                ]}
-                value={comparisonMetric}
-                onChange={setComparisonMetric}
+                label={intervention.building_code ?? intervention.building_name ?? ""}
+                value={`${num(intervention.elapsed_days, 1)} / ${intervention.monitoring_days_required}`}
+                unit="days"
+                caption={intervention.title}
+                tone={intervention.status === "VERIFIED" ? "mint" : "ink"}
               />
-            }
-          />
-          <div className="px-2 pb-2">
-            {data ? (
-              <ComparisonBars
-                data={data.buildings as unknown as Array<Record<string, unknown>>}
-                dataKey={comparisonMetric}
-                unit={
-                  comparisonMetric === "water_liters"
-                    ? " L"
-                    : comparisonMetric === "energy_intensity"
-                      ? " kWh/m2"
-                      : " kWh"
-                }
-                height={236}
-                colourFor={(row) =>
-                  row.status === "CRITICAL"
-                    ? "rgb(var(--critical))"
-                    : row.status === "WARNING"
-                      ? "rgb(var(--medium))"
-                      : comparisonMetric === "water_liters"
-                        ? "rgb(var(--aqua))"
-                        : "rgb(var(--mint))"
-                }
-              />
-            ) : (
-              <div className="px-3">
-                <Skeleton className="h-[236px] w-full" />
-              </div>
-            )}
+            ))}
           </div>
-          <div className="divider-y px-5 py-3">
-            <div className="space-y-2">
-              {data?.buildings.map((building) => (
-                <Link
-                  key={building.building_id}
-                  href={`/buildings/${building.building_id}`}
-                  className="group flex items-center justify-between gap-3 text-[12px]"
-                >
-                  <span className="flex items-center gap-2">
-                    <span
-                      className={cn(
-                        "size-1.5 rounded-full",
-                        building.status === "CRITICAL"
-                          ? "bg-critical"
-                          : building.status === "WARNING"
-                            ? "bg-medium"
-                            : "bg-mint",
-                      )}
-                    />
-                    <span className="text-ink-soft transition-colors group-hover:text-ink">
-                      {building.name}
-                    </span>
-                  </span>
-                  <span className="num flex items-center gap-2 text-ink-muted">
-                    {building.open_anomalies > 0 ? (
-                      <span className="text-critical">
-                        {building.open_anomalies} open
-                      </span>
-                    ) : null}
-                    <span
-                      className={cn(
-                        building.deviation_pct > 3
-                          ? "text-high"
-                          : building.deviation_pct < -3
-                            ? "text-mint"
-                            : "",
-                      )}
-                    >
-                      {signedPct(building.deviation_pct)}
-                    </span>
-                  </span>
-                </Link>
-              ))}
-            </div>
-          </div>
-        </Panel>
-      </section>
-
-      {/* ---- anomalies + recommendations --------------------------- */}
-      <section className="grid items-start gap-4 xl:grid-cols-2">
-        <Panel>
-          <PanelHeader
-            eyebrow="Anomaly centre"
-            title="Active anomalies"
-            subtitle="Detected by consensus of two independent detectors, then diagnosed."
-            action={
-              <Button variant="ghost" size="sm" asChild>
-                <Link href="/anomalies">
-                  All <ArrowRight />
-                </Link>
-              </Button>
-            }
-          />
-          <div className="space-y-2 px-4 pb-5">
-            {loading && !data ? <LoadingPanel rows={3} /> : null}
-            {data?.anomalies.length ? (
-              data.anomalies
-                .slice(0, 4)
-                .map((anomaly) => <AnomalyCard key={anomaly.id} anomaly={anomaly} />)
-            ) : data ? (
-              <EmptyState
-                icon={Radar}
-                title="No active anomalies"
-                description="Every building is tracking its expected-consumption baseline."
-                compact
-              />
-            ) : null}
-          </div>
-        </Panel>
-
-        <Panel>
-          <PanelHeader
-            eyebrow="AI recommendations"
-            title="Highest-value actions"
-            subtitle="Each measure is sized from the measured excess and ranked by severity and value."
-            action={
-              <Button variant="ghost" size="sm" asChild>
-                <Link href="/recommendations">
-                  All <ArrowRight />
-                </Link>
-              </Button>
-            }
-          />
-          <div className="space-y-3 px-4 pb-5">
-            {loading && !data ? <LoadingPanel rows={2} /> : null}
-            {data?.recommendations.length ? (
-              data.recommendations.slice(0, 2).map((rec) => (
-                <RecommendationCard
-                  key={rec.id}
-                  recommendation={rec}
-                  currencySymbol={symbol}
-                  applying={applyingId === rec.id && apply.pending}
-                  onApply={async (r) => {
-                    setApplyingId(r.id);
-                    await apply.mutate(r);
-                    setApplyingId(null);
-                  }}
-                />
-              ))
-            ) : data ? (
-              <EmptyState
-                icon={Lightbulb}
-                title="No open recommendations"
-                description="Every diagnosed anomaly has already been actioned."
-                compact
-              />
-            ) : null}
-            {apply.error ? (
-              <ErrorState error={apply.error} compact />
-            ) : null}
-          </div>
-        </Panel>
-      </section>
-
-      {/* ---- interventions + verification -------------------------- */}
-      <section className="grid items-start gap-4 xl:grid-cols-2">
-        <Panel>
-          <PanelHeader
-            eyebrow="Intervention tracking"
-            title="Recent interventions"
-            action={
-              <Button variant="ghost" size="sm" asChild>
-                <Link href="/interventions">
-                  All <ArrowRight />
-                </Link>
-              </Button>
-            }
-          />
-          <div className="space-y-3 px-4 pb-5">
-            {data?.interventions.length ? (
-              data.interventions.slice(0, 2).map((intervention) => (
-                <InterventionCard key={intervention.id} intervention={intervention} />
-              ))
-            ) : data ? (
-              <EmptyState
-                icon={Wrench}
-                title="No interventions yet"
-                description="Apply a recommendation to open a monitoring period."
-                compact
-              />
-            ) : (
-              <LoadingPanel rows={2} />
-            )}
-          </div>
-        </Panel>
-
-        <Panel>
-          <PanelHeader
-            eyebrow="Savings verification"
-            title="Measured, not estimated"
-            subtitle="Post-intervention consumption against a weather- and occupancy-adjusted baseline."
-            action={
-              <Button variant="ghost" size="sm" asChild>
-                <Link href="/verification">
-                  All <ArrowRight />
-                </Link>
-              </Button>
-            }
-          />
-          <div className="space-y-2 px-4 pb-5">
-            {data?.verifications.length ? (
-              data.verifications.map((verification) => (
-                <VerificationSummary
-                  key={verification.id}
-                  verification={verification}
-                  currencySymbol={symbol}
-                />
-              ))
-            ) : data ? (
-              <EmptyState
-                icon={BadgeCheck}
-                title="Nothing verified yet"
-                description="Run verification on an intervention once its monitoring period completes."
-                compact
-              />
-            ) : (
-              <LoadingPanel rows={2} />
-            )}
-          </div>
-
-          {data?.verifications.length ? (
-            <div className="divider-y px-5 py-4">
-              <div className="grid grid-cols-3 gap-4">
-                <MiniStat
-                  label="Energy"
-                  value={`${compact(
-                    data.verifications
-                      .filter((v) => v.status === "VERIFIED" && v.resource_type === "ENERGY")
-                      .reduce((sum, v) => sum + v.absolute_saving, 0),
-                    1,
-                  )}`}
-                  unit="kWh/wk"
-                />
-                <MiniStat
-                  label="Water"
-                  value={`${compact(
-                    data.verifications
-                      .filter((v) => v.status === "VERIFIED" && v.resource_type === "WATER")
-                      .reduce((sum, v) => sum + v.absolute_saving, 0) / 1000,
-                    1,
-                  )}`}
-                  unit="kL/wk"
-                />
-                <MiniStat
-                  label="Value"
-                  value={`${symbol}${compact(
-                    data.verifications
-                      .filter((v) => v.status === "VERIFIED")
-                      .reduce((sum, v) => sum + v.financial_saving_per_year, 0),
-                    1,
-                  )}`}
-                  unit="/yr"
-                />
-              </div>
-            </div>
-          ) : null}
-        </Panel>
-      </section>
-    </div>
-  );
-}
-
-function ChartLegend({ resource }: { resource: "ALL" | "ENERGY" | "WATER" }) {
-  return (
-    <div className="divider-y flex flex-wrap items-center gap-x-5 gap-y-2 px-5 py-3">
-      {resource !== "WATER" ? (
-        <LegendItem colour="bg-mint" label="Energy metered" icon={Zap} />
+        </Section>
       ) : null}
-      {resource !== "ENERGY" ? (
-        <LegendItem colour="bg-aqua" label="Water metered" icon={Droplets} />
-      ) : null}
-      <span className="flex items-center gap-1.5 text-[11px] text-ink-muted">
-        <span className="flex h-px w-5 items-center">
-          <span className="h-px w-full border-t border-dashed border-ink-soft" />
-        </span>
-        Model expectation
-      </span>
-      <Badge tone="neutral" className="ml-auto">
-        Actual vs expected
-      </Badge>
-    </div>
-  );
-}
-
-function LegendItem({
-  colour,
-  label,
-  icon: Icon,
-}: {
-  colour: string;
-  label: string;
-  icon: React.ComponentType<{ className?: string }>;
-}) {
-  return (
-    <span className="flex items-center gap-1.5 text-[11px] text-ink-muted">
-      <Icon className="size-3" />
-      <span className={cn("size-2 rounded-[2px]", colour)} />
-      {label}
-    </span>
-  );
-}
-
-function MiniStat({
-  label,
-  value,
-  unit,
-}: {
-  label: string;
-  value: string;
-  unit: string;
-}) {
-  return (
-    <div>
-      <div className="eyebrow mb-1">{label}</div>
-      <div className="num text-[15px] font-semibold text-mint">
-        {value}
-        <span className="ml-0.5 text-[10px] font-normal text-ink-muted">{unit}</span>
-      </div>
     </div>
   );
 }

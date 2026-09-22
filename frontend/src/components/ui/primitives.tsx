@@ -7,29 +7,37 @@ import * as React from "react";
 
 import { cn } from "@/lib/utils";
 
+/**
+ * Controls and states.
+ *
+ * Everything here is deliberately quiet. A control should be legible and
+ * reachable without competing with the data it sits next to, which in practice
+ * means hairlines instead of fills, 4-6px corners instead of pills, and a
+ * single accent colour used only where it carries meaning.
+ */
+
 // --------------------------------------------------------------------------
 // Button
 // --------------------------------------------------------------------------
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium transition-all duration-150 disabled:pointer-events-none disabled:opacity-45 [&_svg]:shrink-0",
+  "inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded font-medium transition-colors duration-150 disabled:pointer-events-none disabled:opacity-40 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
-        primary:
-          "bg-mint text-[rgb(6_18_14)] hover:bg-mint/90 active:scale-[0.985] shadow-[0_1px_0_0_rgb(255_255_255/0.18)_inset]",
+        primary: "bg-mint text-[rgb(6_16_13)] hover:bg-mint/88",
         secondary:
-          "border bg-surface/70 text-ink hover:bg-elevated hover:border-[rgb(var(--line)/0.2)]",
-        ghost: "text-ink-soft hover:bg-surface/80 hover:text-ink",
+          "border border-[rgb(var(--line)/0.14)] bg-surface text-ink hover:border-[rgb(var(--line)/0.26)] hover:bg-elevated",
+        ghost: "text-ink-muted hover:bg-[rgb(var(--line)/0.06)] hover:text-ink",
         outline:
-          "border border-mint/35 text-mint hover:bg-mint/10 hover:border-mint/55",
+          "border border-mint/35 text-mint hover:border-mint/60 hover:bg-mint/[0.08]",
         danger:
-          "border border-critical/35 text-critical hover:bg-critical/10 hover:border-critical/55",
+          "border border-critical/30 text-critical hover:border-critical/55 hover:bg-critical/[0.08]",
       },
       size: {
-        sm: "h-8 px-3 text-xs [&_svg]:size-3.5",
-        md: "h-9 px-4 [&_svg]:size-4",
-        lg: "h-11 px-6 text-[0.95rem] [&_svg]:size-[18px]",
-        icon: "size-9 [&_svg]:size-4",
+        sm: "h-7 px-2.5 text-[11.5px] [&_svg]:size-3",
+        md: "h-8 px-3 text-[12.5px] [&_svg]:size-3.5",
+        lg: "h-10 px-5 text-[13.5px] [&_svg]:size-4",
+        icon: "size-7 [&_svg]:size-3.5",
       },
     },
     defaultVariants: { variant: "secondary", size: "md" },
@@ -71,19 +79,25 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 Button.displayName = "Button";
 
 // --------------------------------------------------------------------------
-// Panel
+// Surface
+//
+// Used only where content genuinely needs containment: a chart plot, a table
+// body, an inspector floating over the 3D scene. Never for a single metric.
 // --------------------------------------------------------------------------
-export function Panel({
+export function Surface({
   className,
   children,
   ...props
 }: React.HTMLAttributes<HTMLDivElement>) {
   return (
-    <div className={cn("panel", className)} {...props}>
+    <div className={cn("surface", className)} {...props}>
       {children}
     </div>
   );
 }
+
+/** Retained name so older call sites keep the same geometry. */
+export const Panel = Surface;
 
 export function PanelHeader({
   title,
@@ -101,17 +115,19 @@ export function PanelHeader({
   return (
     <div
       className={cn(
-        "flex items-start justify-between gap-4 px-5 pb-4 pt-5",
+        "flex items-start justify-between gap-4 border-b border-[rgb(var(--line)/0.07)] px-4 py-3.5",
         className,
       )}
     >
       <div className="min-w-0">
-        {eyebrow ? <div className="eyebrow mb-1.5">{eyebrow}</div> : null}
-        <h2 className="font-display text-[0.95rem] font-semibold leading-tight text-ink">
+        {eyebrow ? <div className="label mb-1.5">{eyebrow}</div> : null}
+        <h2 className="text-[13px] font-semibold leading-tight tracking-[-0.01em] text-ink">
           {title}
         </h2>
         {subtitle ? (
-          <p className="mt-1 text-xs leading-relaxed text-ink-muted">{subtitle}</p>
+          <p className="mt-1 max-w-prose text-[11.5px] leading-relaxed text-ink-muted">
+            {subtitle}
+          </p>
         ) : null}
       </div>
       {action ? <div className="shrink-0">{action}</div> : null}
@@ -121,20 +137,24 @@ export function PanelHeader({
 
 // --------------------------------------------------------------------------
 // Badge
+//
+// Reserved for a state that has no natural column of its own. Where a state
+// does have a column, use StatusText instead: it carries the same information
+// with no chrome at all.
 // --------------------------------------------------------------------------
 const badgeVariants = cva(
-  "inline-flex items-center gap-1.5 rounded-md border px-2 py-[3px] text-2xs font-medium",
+  "inline-flex items-center gap-1.5 rounded-sm border px-1.5 py-[2px] text-[10px] font-medium leading-[15px] tracking-[0.01em]",
   {
     variants: {
       tone: {
-        neutral: "border-[rgb(var(--line)/0.14)] bg-surface/80 text-ink-soft",
-        mint: "border-mint/28 bg-mint/10 text-mint",
-        aqua: "border-aqua/28 bg-aqua/10 text-aqua",
-        iris: "border-iris/28 bg-iris/10 text-iris",
-        low: "border-low/25 bg-low/10 text-low",
-        medium: "border-medium/25 bg-medium/10 text-medium",
-        high: "border-high/25 bg-high/10 text-high",
-        critical: "border-critical/25 bg-critical/10 text-critical",
+        neutral: "border-[rgb(var(--line)/0.14)] text-ink-muted",
+        mint: "border-mint/30 bg-mint/[0.07] text-mint",
+        aqua: "border-aqua/30 bg-aqua/[0.07] text-aqua",
+        iris: "border-iris/30 bg-iris/[0.07] text-iris",
+        low: "border-low/28 text-low",
+        medium: "border-medium/32 bg-medium/[0.07] text-medium",
+        high: "border-high/32 bg-high/[0.07] text-high",
+        critical: "border-critical/32 bg-critical/[0.07] text-critical",
       },
     },
     defaultVariants: { tone: "neutral" },
@@ -174,25 +194,30 @@ export function Badge({
 // --------------------------------------------------------------------------
 // Status dot
 // --------------------------------------------------------------------------
+const DOT_COLOUR = {
+  mint: "bg-mint",
+  medium: "bg-medium",
+  high: "bg-high",
+  critical: "bg-critical",
+  aqua: "bg-aqua",
+  iris: "bg-iris",
+  muted: "bg-ink-muted",
+} as const;
+
+export type DotTone = keyof typeof DOT_COLOUR;
+
 export function StatusDot({
   tone,
   pulse = false,
   className,
 }: {
-  tone: "mint" | "medium" | "critical" | "aqua" | "muted";
+  tone: DotTone;
   pulse?: boolean;
   className?: string;
 }) {
-  const colour = {
-    mint: "bg-mint",
-    medium: "bg-medium",
-    critical: "bg-critical",
-    aqua: "bg-aqua",
-    muted: "bg-ink-muted",
-  }[tone];
-
+  const colour = DOT_COLOUR[tone];
   return (
-    <span className={cn("relative flex size-2", className)}>
+    <span className={cn("relative flex size-1.5", className)}>
       {pulse ? (
         <span
           className={cn(
@@ -201,7 +226,7 @@ export function StatusDot({
           )}
         />
       ) : null}
-      <span className={cn("relative inline-flex size-2 rounded-full", colour)} />
+      <span className={cn("relative inline-flex size-1.5 rounded-full", colour)} />
     </span>
   );
 }
@@ -215,10 +240,7 @@ export function Skeleton({
 }: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={cn(
-        "shimmer rounded-md bg-[rgb(var(--line)/0.055)]",
-        className,
-      )}
+      className={cn("shimmer rounded-sm bg-[rgb(var(--line)/0.05)]", className)}
       {...props}
     />
   );
@@ -232,14 +254,12 @@ export function LoadingPanel({
   className?: string;
 }) {
   return (
-    <div className={cn("space-y-3 p-5", className)}>
+    <div className={cn("space-y-3 py-1", className)}>
       {Array.from({ length: rows }).map((_, i) => (
         <div key={i} className="flex items-center gap-3">
-          <Skeleton className="size-9 rounded-lg" />
-          <div className="flex-1 space-y-2">
-            <Skeleton className="h-3 w-1/3" />
-            <Skeleton className="h-2.5 w-2/3" />
-          </div>
+          <Skeleton className="h-3 w-24" />
+          <Skeleton className="h-3 flex-1" />
+          <Skeleton className="h-3 w-16" />
         </div>
       ))}
     </div>
@@ -265,27 +285,25 @@ export function ErrorState({
   return (
     <div
       className={cn(
-        "flex flex-col items-center justify-center gap-3 rounded-card border border-critical/20 bg-critical/[0.04] text-center",
-        compact ? "px-4 py-6" : "px-6 py-12",
+        "flex items-start gap-3 rounded-md border border-critical/22 bg-critical/[0.035]",
+        compact ? "px-4 py-3.5" : "px-5 py-5",
       )}
     >
-      <div className="flex size-10 items-center justify-center rounded-lg border border-critical/25 bg-critical/10 text-critical">
-        <Icon className="size-5" />
-      </div>
-      <div className="max-w-md space-y-1.5">
-        <p className="text-sm font-medium text-ink">
+      <Icon className="mt-px size-4 shrink-0 text-critical" />
+      <div className="min-w-0 flex-1 space-y-1.5">
+        <p className="text-[12.5px] font-medium text-ink">
           {error.offline ? "Backend unavailable" : "Something went wrong"}
         </p>
-        <p className="text-xs leading-relaxed text-ink-soft">{error.message}</p>
+        <p className="text-[11.5px] leading-relaxed text-ink-soft">{error.message}</p>
         {error.hint ? (
-          <p className="mt-2 rounded-md border border-[rgb(var(--line)/0.12)] bg-surface/70 px-3 py-2 font-mono text-[11px] leading-relaxed text-ink-muted">
+          <p className="mt-2 overflow-x-auto rounded border border-[rgb(var(--line)/0.1)] bg-canvas px-2.5 py-1.5 font-mono text-[10.5px] leading-relaxed text-ink-muted">
             {error.hint}
           </p>
         ) : null}
       </div>
       {onRetry ? (
-        <Button size="sm" variant="secondary" onClick={onRetry}>
-          <RefreshCw /> Try again
+        <Button size="sm" variant="secondary" onClick={onRetry} className="shrink-0">
+          <RefreshCw /> Retry
         </Button>
       ) : null}
     </div>
@@ -308,21 +326,19 @@ export function EmptyState({
   return (
     <div
       className={cn(
-        "flex flex-col items-center justify-center gap-3 text-center",
-        compact ? "px-4 py-8" : "px-6 py-14",
+        "flex flex-col items-start gap-2 border-l-2 border-[rgb(var(--line)/0.1)] pl-4",
+        compact ? "py-3" : "py-6",
       )}
     >
-      {Icon ? (
-        <div className="flex size-10 items-center justify-center rounded-lg border border-[rgb(var(--line)/0.12)] bg-surface/70 text-ink-muted">
-          <Icon className="size-5" />
-        </div>
-      ) : null}
-      <div className="max-w-sm space-y-1">
-        <p className="text-sm font-medium text-ink">{title}</p>
-        {description ? (
-          <p className="text-xs leading-relaxed text-ink-muted">{description}</p>
-        ) : null}
+      <div className="flex items-center gap-2">
+        {Icon ? <Icon className="size-3.5 text-ink-faint" /> : null}
+        <p className="text-[12.5px] font-medium text-ink-soft">{title}</p>
       </div>
+      {description ? (
+        <p className="max-w-md text-[11.5px] leading-relaxed text-ink-muted">
+          {description}
+        </p>
+      ) : null}
       {action}
     </div>
   );
@@ -348,7 +364,7 @@ export function Segmented<T extends string | number>({
     <div
       role="tablist"
       className={cn(
-        "inline-flex items-center gap-0.5 rounded-lg border border-[rgb(var(--line)/0.12)] bg-surface/60 p-0.5",
+        "inline-flex items-center rounded border border-[rgb(var(--line)/0.12)] bg-canvas p-px",
         className,
       )}
     >
@@ -362,10 +378,12 @@ export function Segmented<T extends string | number>({
             title={option.title}
             onClick={() => onChange(option.value)}
             className={cn(
-              "rounded-[6px] font-medium transition-all duration-150",
-              size === "sm" ? "px-2.5 py-1 text-2xs" : "px-3 py-1.5 text-xs",
+              "rounded-sm font-medium transition-colors duration-150",
+              size === "sm"
+                ? "px-2 py-[3px] text-[11px]"
+                : "px-2.5 py-1 text-[11.5px]",
               active
-                ? "bg-elevated text-ink shadow-[0_1px_0_0_rgb(var(--line)/0.12)]"
+                ? "bg-[rgb(var(--line)/0.1)] text-ink"
                 : "text-ink-muted hover:text-ink-soft",
             )}
           >
@@ -386,37 +404,26 @@ export function Progress({
   className,
 }: {
   value: number;
-  tone?: "mint" | "aqua" | "medium";
+  tone?: "mint" | "aqua" | "medium" | "iris";
   className?: string;
 }) {
-  const colour = { mint: "bg-mint", aqua: "bg-aqua", medium: "bg-medium" }[tone];
+  const colour = {
+    mint: "bg-mint",
+    aqua: "bg-aqua",
+    medium: "bg-medium",
+    iris: "bg-iris",
+  }[tone];
   return (
     <div
       className={cn(
-        "h-1.5 w-full overflow-hidden rounded-full bg-[rgb(var(--line)/0.08)]",
+        "h-[3px] w-full overflow-hidden rounded-sm bg-[rgb(var(--line)/0.08)]",
         className,
       )}
     >
       <div
-        className={cn("h-full rounded-full transition-all duration-700", colour)}
+        className={cn("h-full transition-[width] duration-500", colour)}
         style={{ width: `${Math.max(0, Math.min(100, value))}%` }}
       />
     </div>
-  );
-}
-
-// --------------------------------------------------------------------------
-// Tooltip-ish info marker
-// --------------------------------------------------------------------------
-export function InfoHint({ text }: { text: string }) {
-  return (
-    <span className="group relative inline-flex">
-      <span className="flex size-3.5 cursor-help items-center justify-center rounded-full border border-[rgb(var(--line)/0.2)] text-[9px] font-semibold text-ink-muted">
-        i
-      </span>
-      <span className="pointer-events-none absolute bottom-full left-1/2 z-50 mb-2 w-60 -translate-x-1/2 rounded-lg border border-[rgb(var(--line)/0.14)] bg-elevated px-3 py-2 text-[11px] leading-relaxed text-ink-soft opacity-0 shadow-lift transition-opacity duration-150 group-hover:opacity-100">
-        {text}
-      </span>
-    </span>
   );
 }

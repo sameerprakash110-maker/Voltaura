@@ -1,17 +1,16 @@
 "use client";
 
-import { Lightbulb, Wallet } from "lucide-react";
 import * as React from "react";
 
-import { RecommendationCard } from "@/components/cards/domain-cards";
+import { RecommendationList } from "@/components/domain/recommendation-list";
 import { useAppState } from "@/components/providers/app-state";
 import {
   EmptyState,
   ErrorState,
   LoadingPanel,
-  Panel,
   Segmented,
 } from "@/components/ui/primitives";
+import { Metric, PageHeader, Section } from "@/components/ui/structure";
 import { api } from "@/lib/api";
 import { compact, num } from "@/lib/format";
 import type { Recommendation, ResourceFilter, SettingsPayload } from "@/lib/types";
@@ -19,6 +18,14 @@ import { useApi, useMutation } from "@/lib/use-api";
 
 type StatusFilter = "PENDING" | "APPLIED" | "ALL";
 
+/**
+ * Recommendations.
+ *
+ * Organised around the decision rather than the object: what is wrong, what
+ * the evidence says, what to do, what it is worth. The opportunity total at the
+ * top is the sum of everything still open, so the page states its own stake
+ * before asking for a decision on any single measure.
+ */
 export default function RecommendationsPage() {
   const { resource, setResource } = useAppState();
   const [status, setStatus] = React.useState<StatusFilter>("PENDING");
@@ -53,94 +60,94 @@ export default function RecommendationsPage() {
   }, [data]);
 
   return (
-    <div className="space-y-5">
-      <header>
-        <div className="eyebrow mb-1.5">AI recommendations</div>
-        <h1 className="font-display text-2xl font-semibold tracking-tight text-ink">
-          Evidence-based measures
-        </h1>
-        <p className="mt-1.5 max-w-2xl text-[13px] text-ink-muted">
-          One measure per diagnosed cause. The prose is a fixed template; every
-          number is derived from the measured excess across the fault footprint,
-          discounted by a stated recoverable fraction.
-        </p>
-      </header>
+    <div className="space-y-8">
+      <PageHeader
+        label="Intelligence"
+        title="Recommended Actions"
+        description="One measure per diagnosed cause. The prose is a fixed template; every number is derived from the measured excess across the fault footprint, discounted by a stated recoverable fraction."
+      />
 
-      {/* ---- opportunity summary ---- */}
-      <section className="grid grid-cols-2 gap-px overflow-hidden rounded-panel border border-[rgb(var(--line)/0.1)] bg-[rgb(var(--line)/0.07)] lg:grid-cols-4">
-        <Stat label="Open recommendations" value={num(totals.count)} />
-        <Stat
+      {/* ---- what is on the table ---- */}
+      <section className="grid gap-x-8 gap-y-6 border-y border-[rgb(var(--line)/0.08)] py-6 sm:grid-cols-2 lg:grid-cols-4">
+        <Metric label="Open recommendations" value={num(totals.count)} size="lg" />
+        <Metric
           label="Energy opportunity"
           value={compact(totals.energy, 1)}
           unit="kWh/wk"
+          size="lg"
           tone="mint"
         />
-        <Stat
+        <Metric
           label="Water opportunity"
           value={compact(totals.water / 1000, 1)}
           unit="kL/wk"
+          size="lg"
           tone="aqua"
         />
-        <Stat
+        <Metric
           label="Value at stake"
           value={`${symbol}${compact(totals.money * 52, 1)}`}
           unit="per year"
+          size="lg"
           tone="mint"
+          caption="Estimated, not yet verified"
         />
       </section>
 
-      <div className="flex flex-wrap items-center gap-3">
-        <Segmented
-          size="sm"
-          options={[
-            { value: "ALL", label: "All resources" },
-            { value: "ENERGY", label: "Energy" },
-            { value: "WATER", label: "Water" },
-          ]}
-          value={resource}
-          onChange={(v) => setResource(v as ResourceFilter)}
-        />
-        <Segmented
-          size="sm"
-          options={[
-            { value: "PENDING", label: "Open" },
-            { value: "APPLIED", label: "Applied" },
-            { value: "ALL", label: "All" },
-          ]}
-          value={status}
-          onChange={setStatus}
-        />
+      {/* ---- filters ---- */}
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
+        <div className="flex items-center gap-2.5">
+          <span className="label">Resource</span>
+          <Segmented
+            size="sm"
+            options={[
+              { value: "ALL", label: "All" },
+              { value: "ENERGY", label: "Energy" },
+              { value: "WATER", label: "Water" },
+            ]}
+            value={resource}
+            onChange={(v) => setResource(v as ResourceFilter)}
+          />
+        </div>
+        <div className="flex items-center gap-2.5">
+          <span className="label">Status</span>
+          <Segmented
+            size="sm"
+            options={[
+              { value: "PENDING", label: "Open" },
+              { value: "APPLIED", label: "Applied" },
+              { value: "ALL", label: "All" },
+            ]}
+            value={status}
+            onChange={setStatus}
+          />
+        </div>
       </div>
 
       {error ? <ErrorState error={error} onRetry={() => refetch()} /> : null}
       {apply.error ? <ErrorState error={apply.error} compact /> : null}
 
-      {loading && !data ? (
-        <Panel>
-          <LoadingPanel rows={4} />
-        </Panel>
-      ) : null}
+      <Section
+        label="Measures"
+        title={`${data?.length ?? 0} ${
+          (data?.length ?? 0) === 1 ? "recommendation" : "recommendations"
+        }`}
+      >
+        {loading && !data ? <LoadingPanel rows={4} /> : null}
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        {data?.map((recommendation) => (
-          <RecommendationCard
-            key={recommendation.id}
-            recommendation={recommendation}
+        {data?.length ? (
+          <RecommendationList
+            recommendations={data}
             currencySymbol={symbol}
-            applying={applyingId === recommendation.id && apply.pending}
-            onApply={async (r) => {
-              setApplyingId(r.id);
-              await apply.mutate(r);
+            applyingId={apply.pending ? applyingId : null}
+            onApply={async (rec) => {
+              setApplyingId(rec.id);
+              await apply.mutate(rec);
               setApplyingId(null);
             }}
           />
-        ))}
-      </div>
-
-      {data?.length === 0 ? (
-        <Panel>
+        ) : data ? (
           <EmptyState
-            icon={status === "PENDING" ? Wallet : Lightbulb}
             title={
               status === "PENDING"
                 ? "No open recommendations"
@@ -148,40 +155,12 @@ export default function RecommendationsPage() {
             }
             description={
               status === "PENDING"
-                ? "Every diagnosed anomaly has already been actioned. Re-run detection from the Anomalies page to look again."
+                ? "Every diagnosed anomaly has already been actioned. Re-run detection from the Anomaly Monitor to look again."
                 : "Try a different resource or status filter."
             }
           />
-        </Panel>
-      ) : null}
-    </div>
-  );
-}
-
-function Stat({
-  label,
-  value,
-  unit,
-  tone,
-}: {
-  label: string;
-  value: string;
-  unit?: string;
-  tone?: "mint" | "aqua";
-}) {
-  return (
-    <div className="bg-canvas px-5 py-4">
-      <div className="eyebrow mb-1.5">{label}</div>
-      <div
-        className={`num text-[20px] font-semibold ${
-          tone === "mint" ? "text-mint" : tone === "aqua" ? "text-aqua" : "text-ink"
-        }`}
-      >
-        {value}
-        {unit ? (
-          <span className="ml-1 text-[10px] font-normal text-ink-muted">{unit}</span>
         ) : null}
-      </div>
+      </Section>
     </div>
   );
 }

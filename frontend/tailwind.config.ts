@@ -6,6 +6,10 @@ import type { Config } from "tailwindcss";
  * Colours are declared once as CSS custom properties in globals.css and
  * referenced here, so light and dark themes share a single set of semantic
  * names. Components never reach for a raw hex value.
+ *
+ * The radius scale tops out at 10px on purpose: tables, telemetry panels and
+ * data visualisations use the sharp end of it, which is what stops the product
+ * reading as a generic card dashboard.
  */
 const config: Config = {
   darkMode: ["class", '[data-theme="dark"]'],
@@ -17,11 +21,11 @@ const config: Config = {
         surface: "rgb(var(--surface) / <alpha-value>)",
         elevated: "rgb(var(--elevated) / <alpha-value>)",
         line: "rgb(var(--line) / <alpha-value>)",
-        "line-strong": "rgb(var(--line-strong) / <alpha-value>)",
 
         ink: "rgb(var(--ink) / <alpha-value>)",
         "ink-soft": "rgb(var(--ink-soft) / <alpha-value>)",
         "ink-muted": "rgb(var(--ink-muted) / <alpha-value>)",
+        "ink-faint": "rgb(var(--ink-faint) / <alpha-value>)",
 
         mint: "rgb(var(--mint) / <alpha-value>)",
         "mint-deep": "rgb(var(--mint-deep) / <alpha-value>)",
@@ -36,35 +40,44 @@ const config: Config = {
       },
       fontFamily: {
         sans: ["var(--font-inter)", "system-ui", "sans-serif"],
-        display: ["var(--font-display)", "var(--font-inter)", "sans-serif"],
+        display: ["var(--font-inter)", "system-ui", "sans-serif"],
         mono: ["var(--font-mono)", "ui-monospace", "monospace"],
       },
       fontSize: {
-        "2xs": ["0.6875rem", { lineHeight: "1rem", letterSpacing: "0.04em" }],
+        "2xs": ["0.6875rem", { lineHeight: "1rem", letterSpacing: "0.01em" }],
+        // Telemetry readouts: sized as a deliberate scale, not ad hoc.
+        readout: ["2.125rem", { lineHeight: "1", letterSpacing: "-0.035em" }],
+        "readout-lg": ["2.75rem", { lineHeight: "1", letterSpacing: "-0.04em" }],
+      },
+      letterSpacing: {
+        tightest: "-0.035em",
       },
       borderRadius: {
-        card: "14px",
-        panel: "18px",
+        DEFAULT: "4px",
+        sm: "3px",
+        md: "6px",
+        lg: "8px",
+        xl: "10px",
+        card: "6px",
+        panel: "8px",
       },
       boxShadow: {
-        panel: "0 1px 0 0 rgb(var(--line) / 0.6), 0 20px 50px -30px rgb(0 0 0 / 0.9)",
-        lift: "0 24px 60px -32px rgb(0 0 0 / 0.95)",
-        glow: "0 0 0 1px rgb(var(--mint) / 0.28), 0 0 34px -10px rgb(var(--mint) / 0.45)",
-      },
-      backgroundImage: {
-        grid: `linear-gradient(to right, rgb(var(--line) / 0.55) 1px, transparent 1px),
-               linear-gradient(to bottom, rgb(var(--line) / 0.55) 1px, transparent 1px)`,
-      },
-      backgroundSize: {
-        grid: "56px 56px",
+        // One elevation only, and it is nearly invisible. Depth is not a
+        // hierarchy device in this product; alignment is.
+        raise: "0 1px 2px 0 rgb(0 0 0 / 0.35), 0 8px 24px -16px rgb(0 0 0 / 0.7)",
+        overlay: "0 16px 48px -24px rgb(0 0 0 / 0.85)",
       },
       keyframes: {
+        "fade-in": {
+          from: { opacity: "0", transform: "translateY(4px)" },
+          to: { opacity: "1", transform: "translateY(0)" },
+        },
         "fade-up": {
-          from: { opacity: "0", transform: "translateY(8px)" },
+          from: { opacity: "0", transform: "translateY(6px)" },
           to: { opacity: "1", transform: "translateY(0)" },
         },
         "pulse-ring": {
-          "0%": { transform: "scale(0.85)", opacity: "0.7" },
+          "0%": { transform: "scale(0.9)", opacity: "0.55" },
           "70%": { transform: "scale(1.9)", opacity: "0" },
           "100%": { transform: "scale(1.9)", opacity: "0" },
         },
@@ -72,15 +85,12 @@ const config: Config = {
           "0%": { transform: "translateX(-100%)" },
           "100%": { transform: "translateX(320%)" },
         },
-        "flow-dash": {
-          to: { strokeDashoffset: "-24" },
-        },
       },
       animation: {
-        "fade-up": "fade-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) both",
-        "pulse-ring": "pulse-ring 2.4s cubic-bezier(0.4, 0, 0.6, 1) infinite",
-        sweep: "sweep 2.8s cubic-bezier(0.4, 0, 0.2, 1) infinite",
-        "flow-dash": "flow-dash 1s linear infinite",
+        "fade-in": "fade-in 0.28s cubic-bezier(0.22, 1, 0.36, 1) both",
+        "fade-up": "fade-up 0.32s cubic-bezier(0.22, 1, 0.36, 1) both",
+        "pulse-ring": "pulse-ring 2.6s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+        sweep: "sweep 2.6s cubic-bezier(0.4, 0, 0.2, 1) infinite",
       },
     },
   },

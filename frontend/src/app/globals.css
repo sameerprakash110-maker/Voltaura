@@ -5,64 +5,72 @@
 /*
  * VOLTAURA visual language.
  *
- * Dark is the default because this is an operations surface that sits on a
- * wall. Light exists as a first-class alternative for printing and daylight
- * demos. Both themes define the same token names, so no component branches on
- * theme.
+ * The product is an operations surface, so the interface is built from the
+ * fewest possible structural devices: a hairline, a label, a number and a
+ * column. Containers are the exception rather than the rule -- hierarchy comes
+ * from type scale, alignment and rules, not from boxes stacked on boxes.
+ *
+ * Colour is reserved for data state. Green is healthy or verified, amber is a
+ * warning, red is critical, white is primary information and grey is
+ * everything else. Nothing is coloured for decoration.
  */
 @layer base {
   :root,
   [data-theme="dark"] {
-    --canvas: 6 12 11;
-    --surface: 12 20 19;
-    --elevated: 18 28 26;
+    /* near-black charcoal, very slightly cool */
+    --canvas: 9 11 12;
+    --surface: 14 17 18;
+    --elevated: 20 23 25;
     --line: 255 255 255;
-    --line-strong: 255 255 255;
 
-    --ink: 232 240 238;
-    --ink-soft: 150 170 165;
-    --ink-muted: 102 124 119;
+    --ink: 233 237 238;
+    --ink-soft: 151 161 165;
+    --ink-muted: 103 113 118;
+    --ink-faint: 74 83 88;
 
-    --mint: 52 229 160;
-    --mint-deep: 22 163 112;
-    --aqua: 69 199 232;
-    --aqua-deep: 24 150 184;
-    --iris: 157 140 255;
+    /* VOLTAURA green */
+    --mint: 44 212 142;
+    --mint-deep: 17 138 92;
+    /* water: a muted cool blue, deliberately not neon */
+    --aqua: 88 173 207;
+    --aqua-deep: 44 122 156;
+    /* modelled / derived quantities */
+    --iris: 146 150 190;
 
-    --low: 127 168 160;
-    --medium: 245 185 74;
-    --high: 255 155 84;
-    --critical: 255 107 107;
+    --low: 118 132 136;
+    --medium: 224 168 62;
+    --high: 230 137 66;
+    --critical: 226 90 90;
 
-    --line-alpha: 0.09;
-    --line-strong-alpha: 0.16;
+    --line-alpha: 0.075;
+    --line-strong-alpha: 0.14;
     color-scheme: dark;
   }
 
   [data-theme="light"] {
-    --canvas: 246 248 247;
+    --canvas: 247 248 248;
     --surface: 255 255 255;
     --elevated: 255 255 255;
-    --line: 15 35 30;
-    --line-strong: 15 35 30;
+    --line: 17 24 26;
 
-    --ink: 14 30 26;
-    --ink-soft: 78 100 95;
-    --ink-muted: 120 140 135;
+    --ink: 17 24 26;
+    --ink-soft: 82 94 99;
+    --ink-muted: 122 134 139;
+    --ink-faint: 158 168 172;
 
-    --mint: 13 148 96;
-    --mint-deep: 8 110 71;
-    --aqua: 12 137 172;
-    --aqua-deep: 8 105 133;
-    --iris: 104 82 224;
+    --mint: 12 138 90;
+    --mint-deep: 8 104 68;
+    --aqua: 21 116 152;
+    --aqua-deep: 13 86 114;
+    --iris: 94 100 150;
 
-    --low: 106 140 133;
-    --medium: 190 133 12;
-    --high: 200 106 32;
-    --critical: 208 54 54;
+    --low: 116 130 134;
+    --medium: 176 122 12;
+    --high: 186 98 28;
+    --critical: 198 48 48;
 
-    --line-alpha: 0.1;
-    --line-strong-alpha: 0.18;
+    --line-alpha: 0.11;
+    --line-strong-alpha: 0.2;
     color-scheme: light;
   }
 
@@ -76,7 +84,8 @@
 
   body {
     @apply bg-canvas text-ink font-sans antialiased;
-    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11", "ss01";
+    letter-spacing: -0.006em;
   }
 
   /* Numeric readouts line up in columns and never jitter as values tick. */
@@ -86,84 +95,121 @@
   }
 
   ::selection {
-    background: rgb(var(--mint) / 0.25);
+    background: rgb(var(--mint) / 0.22);
     color: rgb(var(--ink));
   }
 
   ::-webkit-scrollbar {
-    width: 10px;
-    height: 10px;
+    width: 9px;
+    height: 9px;
   }
   ::-webkit-scrollbar-track {
     background: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    background: rgb(var(--line) / 0.16);
-    border-radius: 999px;
+    background: rgb(var(--line) / 0.14);
+    border-radius: 2px;
     border: 3px solid transparent;
     background-clip: content-box;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: rgb(var(--line) / 0.28);
+    background: rgb(var(--line) / 0.24);
     background-clip: content-box;
   }
 
   :focus-visible {
-    outline: 2px solid rgb(var(--mint) / 0.75);
+    outline: 1px solid rgb(var(--mint) / 0.8);
     outline-offset: 2px;
   }
 }
 
 @layer components {
-  /* The panel is the single structural primitive the whole product is built
-     from: a hairline border over a barely-raised surface. */
-  .panel {
-    @apply rounded-panel border bg-surface/70;
-    border-color: rgb(var(--line) / var(--line-alpha));
-    backdrop-filter: blur(12px);
+  /*
+   * Label: the small uppercase key that names a column, a section or a state.
+   * It is the only place uppercase is allowed.
+   */
+  .label {
+    @apply text-[10px] font-medium uppercase leading-none tracking-[0.13em] text-ink-muted;
   }
 
-  .panel-flat {
-    @apply rounded-card border bg-surface/50;
+  /* Retained name for the same thing, so both spellings read identically. */
+  .eyebrow {
+    @apply label;
+  }
+
+  /* Every measured quantity in the product renders through this. */
+  .num {
+    @apply font-mono tabular;
+    letter-spacing: -0.01em;
+  }
+
+  /*
+   * Surface: used only where content genuinely needs containment -- a chart
+   * plot, a table body, an inspector over the 3D scene. Never for a metric.
+   */
+  .surface {
+    @apply rounded-md border bg-surface;
     border-color: rgb(var(--line) / var(--line-alpha));
+  }
+
+  .surface-quiet {
+    @apply rounded-md border bg-surface/45;
+    border-color: rgb(var(--line) / var(--line-alpha));
+  }
+
+  /* Legacy structural names, re-pointed at the flatter geometry. */
+  .panel {
+    @apply surface;
+  }
+  .panel-flat {
+    @apply surface-quiet;
   }
 
   .hairline {
     border-color: rgb(var(--line) / var(--line-alpha));
   }
 
-  .eyebrow {
-    @apply text-2xs font-medium uppercase tracking-[0.16em] text-ink-muted;
+  .rule {
+    @apply border-t;
+    border-color: rgb(var(--line) / var(--line-alpha));
   }
 
-  .num {
-    @apply font-mono tabular;
+  .divider-y {
+    @apply rule;
   }
 
-  /* Ambient field behind the app shell. Two soft radial washes plus a faint
-     grid: enough to feel engineered, quiet enough to read data over. */
-  .ambient::before {
+  /* Data tables: hairline rows, mono figures, no zebra striping. */
+  .data-table {
+    @apply w-full border-collapse text-left;
+  }
+  .data-table thead th {
+    @apply label whitespace-nowrap pb-2.5 pr-5 text-left align-bottom font-medium;
+  }
+  .data-table tbody tr {
+    border-top: 1px solid rgb(var(--line) / var(--line-alpha));
+  }
+  .data-table tbody td {
+    @apply py-2.5 pr-5 align-middle text-[12.5px];
+  }
+  .data-table tbody tr:last-child td {
+    @apply pb-0;
+  }
+
+  /*
+   * Marketing surface only. One very faint wash at the top of the landing
+   * page so the hero is not dead flat; the product screens stay unadorned.
+   */
+  .landing-field::before {
     content: "";
     position: fixed;
     inset: 0;
     pointer-events: none;
     z-index: 0;
-    background:
-      radial-gradient(60rem 40rem at 82% -8%, rgb(var(--mint) / 0.07), transparent 62%),
-      radial-gradient(48rem 34rem at 4% 8%, rgb(var(--aqua) / 0.055), transparent 60%);
-  }
-
-  .ambient::after {
-    content: "";
-    position: fixed;
-    inset: 0;
-    pointer-events: none;
-    z-index: 0;
-    background-image:
-      linear-gradient(to right, rgb(var(--line) / 0.05) 1px, transparent 1px),
-      linear-gradient(to bottom, rgb(var(--line) / 0.05) 1px, transparent 1px);
-    background-size: 64px 64px;
-    mask-image: radial-gradient(70rem 50rem at 50% 0%, black, transparent 78%);
+    background: radial-gradient(
+      58rem 34rem at 78% -12%,
+      rgb(var(--mint) / 0.05),
+      transparent 64%
+    );
   }
 
   .shimmer {
@@ -174,19 +220,14 @@
     content: "";
     position: absolute;
     inset: 0;
-    width: 38%;
+    width: 40%;
     background: linear-gradient(
       90deg,
       transparent,
-      rgb(var(--line) / 0.09),
+      rgb(var(--line) / 0.07),
       transparent
     );
-    animation: sweep 2.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-  }
-
-  .divider-y {
-    @apply border-t;
-    border-color: rgb(var(--line) / var(--line-alpha));
+    animation: sweep 2.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
   }
 }
 
@@ -198,27 +239,29 @@
     text-wrap: pretty;
   }
 
-  /* Recharts overrides: the library's defaults are far too loud. */
+  /* Recharts overrides: the library's defaults are far too loud for telemetry. */
   .recharts-cartesian-axis-tick text {
     fill: rgb(var(--ink-muted));
-    font-size: 11px;
+    font-size: 10px;
     font-family: var(--font-mono);
+    letter-spacing: -0.01em;
   }
   .recharts-cartesian-grid line {
-    stroke: rgb(var(--line) / 0.07);
+    stroke: rgb(var(--line) / 0.055);
   }
   .recharts-curve.recharts-tooltip-cursor {
-    stroke: rgb(var(--line) / 0.22);
+    stroke: rgb(var(--line) / 0.18);
+    stroke-dasharray: 2 3;
   }
   .recharts-rectangle.recharts-tooltip-cursor {
-    fill: rgb(var(--line) / 0.05);
+    fill: rgb(var(--line) / 0.04);
   }
   .recharts-surface {
     overflow: visible;
   }
   .recharts-legend-item-text {
     color: rgb(var(--ink-soft)) !important;
-    font-size: 12px;
+    font-size: 11px;
   }
 }
 
@@ -229,5 +272,42 @@
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+/*
+ * Print.
+ *
+ * The Reports page is meant to leave the building, so printing drops the app
+ * chrome, flattens the dark theme to ink on paper and keeps sections whole.
+ */
+@media print {
+  :root,
+  [data-theme="dark"],
+  [data-theme="light"] {
+    --canvas: 255 255 255;
+    --surface: 255 255 255;
+    --elevated: 255 255 255;
+    --line: 0 0 0;
+    --ink: 0 0 0;
+    --ink-soft: 60 60 60;
+    --ink-muted: 100 100 100;
+    --ink-faint: 130 130 130;
+    --line-alpha: 0.22;
+  }
+
+  [data-chrome] {
+    display: none !important;
+  }
+
+  main {
+    max-width: none !important;
+    padding: 0 !important;
+  }
+
+  section,
+  table,
+  figure {
+    break-inside: avoid;
   }
 }

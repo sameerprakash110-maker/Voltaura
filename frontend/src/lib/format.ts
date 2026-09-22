@@ -115,6 +115,28 @@ export function dateTime(value: string | Date | null | undefined): string {
   })} ${d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`;
 }
 
+/**
+ * System clock stamp for the top bar: "22 SEP 2026 · 09:30".
+ *
+ * Deliberately different from `dateTime`, because this one is read as an
+ * instrument state rather than as a sentence.
+ */
+export function telemetryStamp(value: string | Date | null | undefined): string {
+  if (!value) return "--";
+  const d = parseApiDate(value);
+  if (Number.isNaN(d.getTime())) return "--";
+  const day = d.toLocaleDateString("en-GB", { day: "2-digit" });
+  const month = d
+    .toLocaleDateString("en-GB", { month: "short" })
+    .toUpperCase();
+  const year = d.toLocaleDateString("en-GB", { year: "numeric" });
+  const time = d.toLocaleTimeString("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  return `${day} ${month} ${year} · ${time}`;
+}
+
 export function duration(hours: number): string {
   if (hours < 24) return `${Math.round(hours)}h`;
   const days = Math.floor(hours / 24);

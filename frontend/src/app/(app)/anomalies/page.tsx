@@ -1,28 +1,32 @@
 "use client";
 
-import { Radar, RefreshCw, ShieldCheck } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import * as React from "react";
 
-import { AnomalyCard } from "@/components/cards/domain-cards";
+import { AnomalyTable, SeverityBar } from "@/components/domain/anomaly-table";
 import { useAppState } from "@/components/providers/app-state";
 import {
-  Badge,
   Button,
-  EmptyState,
   ErrorState,
   LoadingPanel,
-  Panel,
-  PanelHeader,
   Segmented,
 } from "@/components/ui/primitives";
+import { Metric, PageHeader, Section } from "@/components/ui/structure";
 import { api } from "@/lib/api";
 import { compact, num } from "@/lib/format";
-import type { Anomaly, ResourceFilter, Severity } from "@/lib/types";
+import type { Anomaly, AnomalyStatus, ResourceFilter, Severity } from "@/lib/types";
 import { useApi, useMutation } from "@/lib/use-api";
 
 type SeverityFilter = Severity | "ALL";
-type StatusFilter = "ALL" | "OPEN" | "DIAGNOSED" | "ACTIONED";
+type StatusFilter = AnomalyStatus | "ALL";
 
+/**
+ * Anomaly monitor.
+ *
+ * A monitoring surface, not a notification feed. The summary line establishes
+ * the size of the queue, the severity rule shows its shape, and everything
+ * else is a table an operator can work down.
+ */
 export default function AnomaliesPage() {
   const { resource, setResource } = useAppState();
   const [severity, setSeverity] = React.useState<SeverityFilter>("ALL");
@@ -45,7 +49,8 @@ export default function AnomaliesPage() {
     return {
       total: list.length,
       critical: list.filter((a) => a.severity === "CRITICAL").length,
-      open: list.filter((a) => a.status === "OPEN" || a.status === "DIAGNOSED").length,
+      open: list.filter((a) => a.status === "OPEN" || a.status === "DIAGNOSED")
+        .length,
       excessEnergy: list
         .filter((a) => a.resource_type === "ENERGY")
         .reduce((sum, a) => sum + a.excess_total, 0),
@@ -56,145 +61,138 @@ export default function AnomaliesPage() {
   }, [data]);
 
   return (
-    <div className="space-y-5">
-      <header className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <div className="eyebrow mb-1.5">Anomaly centre</div>
-          <h1 className="font-display text-2xl font-semibold tracking-tight text-ink">
-            Detected anomalies
-          </h1>
-          <p className="mt-1.5 max-w-2xl text-[13px] text-ink-muted">
-            An Isolation Forest and an hour-normalised residual test must both
-            agree before an interval is flagged. Flagged intervals are then
-            consolidated into events, so a three-week leak appears once rather
-            than ninety times.
-          </p>
-        </div>
-        <Button
-          variant="secondary"
-          size="sm"
-          loading={rerun.pending}
-          onClick={() => rerun.mutate()}
-        >
-          <RefreshCw /> Re-run detection
-        </Button>
-      </header>
+    <div className="space-y-8">
+      <PageHeader
+        label="Intelligence"
+        title="Anomaly Monitor"
+        description="Deviations from what each building was expected to consume. Related intervals are grouped into a single event, so a three-week leak appears once rather than ninety times."
+        actions={
+          <Button
+            variant="secondary"
+            size="sm"
+            loading={rerun.pending}
+            onClick={() => rerun.mutate()}
+          >
+            <RefreshCw /> Re-run detection
+          </Button>
+        }
+      />
 
       {rerun.error ? <ErrorState error={rerun.error} compact /> : null}
 
-      {/* ---- summary ---- */}
-      <section className="grid grid-cols-2 gap-px overflow-hidden rounded-panel border border-[rgb(var(--line)/0.1)] bg-[rgb(var(--line)/0.07)] sm:grid-cols-4">
-        <Stat label="Events" value={num(counts.total)} />
-        <Stat label="Open" value={num(counts.open)} tone="medium" />
-        <Stat label="Critical" value={num(counts.critical)} tone="critical" />
-        <Stat
-          label="Measured excess"
-          value={`${compact(counts.excessEnergy, 1)} kWh`}
-          sub={`${compact(counts.excessWater / 1000, 1)} kL water`}
+      {/* ---- queue state ---- */}
+      <section className="grid gap-x-8 gap-y-6 border-y border-[rgb(var(--line)/0.08)] py-6 sm:grid-cols-2 lg:grid-cols-4">
+        <Metric label="Events" value={num(counts.total)} size="lg" />
+        <Metric
+          label="Open"
+          value={num(counts.open)}
+          size="lg"
+          tone={counts.open > 0 ? "medium" : "muted"}
         />
+        <Metric
+          label="Critical"
+          value={num(counts.critical)}
+          size="lg"
+          tone={counts.critical > 0 ? "critical" : "muted"}
+        />
+        <div>
+          <Metric
+            label="Measured excess"
+            value={compact(counts.excessEnergy, 1)}
+            unit="kWh"
+            size="lg"
+          />
+          <div className="num mt-2 text-[11px] text-ink-muted">
+            {compact(counts.excessWater / 1000, 1)} kL water
+          </div>
+        </div>
       </section>
 
+      {data?.length ? <SeverityBar anomalies={data} className="max-w-lg" /> : null}
+
       {/* ---- filters ---- */}
-      <div className="flex flex-wrap items-center gap-3">
-        <Segmented
-          size="sm"
-          options={[
-            { value: "ALL", label: "All resources" },
-            { value: "ENERGY", label: "Energy" },
-            { value: "WATER", label: "Water" },
-          ]}
-          value={resource}
-          onChange={(v) => setResource(v as ResourceFilter)}
-        />
-        <Segmented
-          size="sm"
-          options={[
-            { value: "ALL", label: "Any severity" },
-            { value: "CRITICAL", label: "Critical" },
-            { value: "HIGH", label: "High" },
-            { value: "MEDIUM", label: "Medium" },
-          ]}
-          value={severity}
-          onChange={setSeverity}
-        />
-        <Segmented
-          size="sm"
-          options={[
-            { value: "ALL", label: "Any status" },
-            { value: "DIAGNOSED", label: "Diagnosed" },
-            { value: "ACTIONED", label: "Actioned" },
-          ]}
-          value={status}
-          onChange={setStatus}
-        />
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
+        <FilterGroup label="Resource">
+          <Segmented
+            size="sm"
+            options={[
+              { value: "ALL", label: "All" },
+              { value: "ENERGY", label: "Energy" },
+              { value: "WATER", label: "Water" },
+            ]}
+            value={resource}
+            onChange={(v) => setResource(v as ResourceFilter)}
+          />
+        </FilterGroup>
+        <FilterGroup label="Severity">
+          <Segmented
+            size="sm"
+            options={[
+              { value: "ALL", label: "Any" },
+              { value: "CRITICAL", label: "Critical" },
+              { value: "HIGH", label: "High" },
+              { value: "MEDIUM", label: "Medium" },
+            ]}
+            value={severity}
+            onChange={setSeverity}
+          />
+        </FilterGroup>
+        <FilterGroup label="Status">
+          <Segmented
+            size="sm"
+            options={[
+              { value: "ALL", label: "Any" },
+              { value: "OPEN", label: "Open" },
+              { value: "DIAGNOSED", label: "Diagnosed" },
+              { value: "ACTIONED", label: "Actioned" },
+              { value: "RESOLVED", label: "Resolved" },
+            ]}
+            value={status}
+            onChange={setStatus}
+          />
+        </FilterGroup>
       </div>
 
-      {/* ---- list ---- */}
-      <Panel>
-        <PanelHeader
-          eyebrow="Events"
-          title={`${counts.total} anomaly ${counts.total === 1 ? "event" : "events"}`}
-          subtitle="Sorted by severity, then by the size of the deviation."
-          action={
-            data?.length ? (
-              <Badge tone="neutral">
-                {data[0]?.detector ?? "isolation_forest+rf_residual"}
-              </Badge>
-            ) : null
-          }
-        />
-        <div className="space-y-2 px-4 pb-5">
-          {loading && !data ? <LoadingPanel rows={4} /> : null}
-          {error ? <ErrorState error={error} onRetry={() => refetch()} compact /> : null}
-          {data?.length ? (
-            data.map((anomaly) => <AnomalyCard key={anomaly.id} anomaly={anomaly} />)
-          ) : data ? (
-            <EmptyState
-              icon={severity === "ALL" && status === "ALL" ? ShieldCheck : Radar}
-              title={
-                severity === "ALL" && status === "ALL"
-                  ? "No anomalies detected"
-                  : "Nothing matches these filters"
-              }
-              description={
-                severity === "ALL" && status === "ALL"
-                  ? "Every building is tracking its expected-consumption baseline."
-                  : "Try widening the severity or status filter."
-              }
-            />
-          ) : null}
-        </div>
-      </Panel>
+      {/* ---- events ---- */}
+      <Section
+        label="Events"
+        title={`${counts.total} anomaly ${counts.total === 1 ? "event" : "events"}`}
+        description="Sorted by severity, then by the size of the deviation."
+      >
+        {error ? <ErrorState error={error} onRetry={() => refetch()} compact /> : null}
+        {loading && !data ? (
+          <LoadingPanel rows={5} />
+        ) : (
+          <AnomalyTable
+            anomalies={data ?? []}
+            emptyTitle={
+              severity === "ALL" && status === "ALL"
+                ? "No anomalies detected"
+                : "Nothing matches these filters"
+            }
+            emptyDescription={
+              severity === "ALL" && status === "ALL"
+                ? "Every building is tracking its expected-consumption baseline."
+                : "Try widening the severity or status filter."
+            }
+          />
+        )}
+      </Section>
     </div>
   );
 }
 
-function Stat({
+function FilterGroup({
   label,
-  value,
-  sub,
-  tone,
+  children,
 }: {
   label: string;
-  value: string;
-  sub?: string;
-  tone?: "medium" | "critical";
+  children: React.ReactNode;
 }) {
   return (
-    <div className="bg-canvas px-5 py-4">
-      <div className="eyebrow mb-1.5">{label}</div>
-      <div
-        className={`num text-[20px] font-semibold ${
-          tone === "critical"
-            ? "text-critical"
-            : tone === "medium"
-              ? "text-medium"
-              : "text-ink"
-        }`}
-      >
-        {value}
-      </div>
-      {sub ? <div className="num mt-0.5 text-[10px] text-ink-muted">{sub}</div> : null}
+    <div className="flex items-center gap-2.5">
+      <span className="label">{label}</span>
+      {children}
     </div>
   );
 }
