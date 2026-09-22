@@ -415,7 +415,7 @@ export default function AnomalyDetailPage() {
 
             <div>
               <div className="label mb-3">Expected saving</div>
-              <div className="grid grid-cols-3 gap-x-6">
+              <div className="grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-3">
                 <Metric
                   value={compact(recommendation.expected_saving_per_week, 1)}
                   unit={`${recommendation.expected_saving_unit}/wk`}

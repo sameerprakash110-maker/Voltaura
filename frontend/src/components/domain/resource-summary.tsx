@@ -55,7 +55,10 @@ export function ResourceSummary({
       {/* the two metered totals, at display size */}
       <div className="grid grid-cols-2 divide-x divide-[rgb(var(--line)/0.08)]">
         {primary.map((kpi, index) => (
-          <div key={kpi.key} className={index === 0 ? "pr-6" : "pl-6"}>
+          <div
+            key={kpi.key}
+            className={index === 0 ? "pr-4 sm:pr-6" : "pl-4 sm:pl-6"}
+          >
             <Metric
               size="hero"
               label={kpi.key === "energy" ? "Energy" : "Water"}
@@ -72,9 +75,12 @@ export function ResourceSummary({
       </div>
 
       {/* what the loop produced from it */}
-      <div className="grid grid-cols-3 divide-x divide-[rgb(var(--line)/0.08)]">
+      <div className="grid gap-y-6 sm:grid-cols-3 sm:divide-x sm:divide-[rgb(var(--line)/0.08)]">
         {secondary.map((kpi, index) => (
-          <div key={kpi.key} className={index === 0 ? "pr-5" : "px-5 last:pr-0"}>
+          <div
+            key={kpi.key}
+            className={index === 0 ? "sm:pr-5" : "sm:px-5 sm:last:pr-0"}
+          >
             <Metric
               size="lg"
               label={kpi.label}
