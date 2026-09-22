@@ -14,5 +14,5 @@
 
 #define WIFI_SSID "YOUR_WIFI_SSID"
 #define WIFI_PASSWORD "YOUR_WIFI_PASSWORD"
-#define BACKEND_HTTP_URL "http://127.0.0.1:8000/api/telemetry"
+#define BACKEND_HTTP_URL "http://192.168.1.100:8000/api/telemetry"
 #define SENSOR_API_KEY "dev-secret-key-lib-01"

@@ -134,6 +134,63 @@ export function relativeDays(value: string | null | undefined): string {
   return months === 1 ? "1 month ago" : `${months} months ago`;
 }
 
+/** Formats recent timestamp into seconds / minutes relative time. */
+export function timeAgo(value: string | Date | null | undefined): string {
+  if (!value) return "Never";
+  const d = parseApiDate(value);
+  const diffMs = Date.now() - d.getTime();
+  if (Number.isNaN(diffMs)) return "--";
+  const sec = Math.floor(diffMs / 1000);
+  if (sec < 5) return "just now";
+  if (sec < 60) return `${sec} seconds ago`;
+  const min = Math.floor(sec / 60);
+  if (min < 60) return min === 1 ? "1 min ago" : `${min} mins ago`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return hr === 1 ? "1 hour ago" : `${hr} hours ago`;
+  const days = Math.floor(hr / 24);
+  return days === 1 ? "yesterday" : `${days} days ago`;
+}
+
+/** Formats uptime seconds into concise human-readable form (e.g. "23h 40m"). */
+export function formatUptime(seconds: number | null | undefined): string {
+  if (seconds === null || seconds === undefined || Number.isNaN(seconds)) return "--";
+  if (seconds < 60) return `${seconds}s`;
+  const min = Math.floor(seconds / 60);
+  if (min < 60) return `${min}m ${seconds % 60}s`;
+  const hr = Math.floor(min / 60);
+  const remMin = min % 60;
+  if (hr < 24) return `${hr}h ${remMin}m`;
+  const days = Math.floor(hr / 24);
+  const remHr = hr % 24;
+  return `${days}d ${remHr}h`;
+}
+
+/** Translates hardware error codes to readable explanations. */
+export function sensorErrorDescription(code: string): string {
+  switch (code) {
+    case "E_ULTRASONIC_TIMEOUT":
+      return "HC-SR04 ultrasonic echo timed out (no reflection detected or out of range).";
+    case "E_ULTRASONIC_BELOW_MIN":
+      return "HC-SR04 measured distance is below 2.0 cm acoustic minimum.";
+    case "E_ULTRASONIC_BLIND_ZONE":
+      return "Water surface entered sensor transducer ringing deadband (<10.0 cm).";
+    case "E_FLOW_OVER_RANGE":
+      return "YF-S201 flow rate exceeded maximum rated 30.0 L/min.";
+    case "E_FLOW_ANOMALY":
+      return "YF-S201 pulse train exceeded 60.0 L/min (electrical contact chatter or floating input).";
+    case "E_TDS_DISCONNECTED":
+      return "TDS probe voltage <20 mV (probe in dry air or disconnected).";
+    case "E_TDS_OVER_VOLTAGE":
+      return "TDS probe voltage >3200 mV (probe short-circuit or ADC saturation).";
+    case "E_TURBIDITY_DISCONNECTED":
+      return "Turbidity sensor voltage <50 mV (IR LED unpowered or disconnected).";
+    case "E_TURBIDITY_OVER_VOLTAGE":
+      return "Turbidity sensor voltage >3250 mV (missing voltage divider or ADC saturation).";
+    default:
+      return `Hardware alert: ${code}`;
+  }
+}
+
 /** Hour label for profile charts: 0 -> "00", 13 -> "13". */
 export function hourLabel(hour: number): string {
   return String(hour).padStart(2, "0");

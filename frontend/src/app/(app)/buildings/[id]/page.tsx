@@ -29,6 +29,7 @@ import {
   type ActualExpectedPoint,
 } from "@/components/charts/primitives";
 import { useAppState } from "@/components/providers/app-state";
+import { LiveTelemetryPanel } from "@/components/telemetry/live-telemetry-panel";
 import {
   Badge,
   Button,
@@ -245,6 +246,11 @@ export default function BuildingDetailPage() {
       <p className="text-[11px] leading-relaxed text-ink-muted">
         {stats.apportionment_note as string}
       </p>
+
+      {/* ---- live physical edge telemetry for this building ---- */}
+      <section>
+        <LiveTelemetryPanel initialBuildingId={id} showBuildingSelector={false} />
+      </section>
 
       {/* ---- charts ---- */}
       <Panel>

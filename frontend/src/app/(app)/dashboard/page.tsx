@@ -23,6 +23,7 @@ import { KpiCard } from "@/components/cards/kpi-card";
 import { CampusChart, ComparisonBars } from "@/components/charts/primitives";
 import { PipelineRail } from "@/components/layout/pipeline-rail";
 import { useAppState } from "@/components/providers/app-state";
+import { LiveTelemetryPanel } from "@/components/telemetry/live-telemetry-panel";
 import {
   Badge,
   Button,
@@ -126,6 +127,11 @@ export default function DashboardPage() {
           <PipelineRail stages={data.pipeline.stages} active="detect" />
         </section>
       ) : null}
+
+      {/* ---- live physical edge telemetry -------------------------- */}
+      <section>
+        <LiveTelemetryPanel />
+      </section>
 
       {/* ---- charts ------------------------------------------------ */}
       <section className="grid items-start gap-4 xl:grid-cols-[1.55fr_1fr]">
