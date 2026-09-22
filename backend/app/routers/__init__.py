@@ -10,6 +10,7 @@ from . import (  # noqa: F401
     recommendations,
     reports,
     settings,
+    telemetry,
     verification,
 )
 
@@ -24,5 +25,6 @@ __all__ = [
     "recommendations",
     "reports",
     "settings",
+    "telemetry",
     "verification",
 ]
