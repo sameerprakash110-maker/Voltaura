@@ -12,7 +12,7 @@
  * ============================================================================
  */
 
-#define WIFI_SSID "YOUR_WIFI_SSID"
-#define WIFI_PASSWORD "YOUR_WIFI_PASSWORD"
-#define BACKEND_HTTP_URL "http://192.168.1.100:8000/api/telemetry"
+#define WIFI_SSID "DivamA35"
+#define WIFI_PASSWORD "password"
+#define BACKEND_HTTP_URL "http://10.20.13.19:8000/api/telemetry"
 #define SENSOR_API_KEY "dev-secret-key-lib-01"
