@@ -22,6 +22,6 @@ scipy>=1.13
 
 # --- optional ----------------------------------------------------------
 # Only needed if VOLTAURA_LLM_API_KEY is set for narrative enrichment.
+# Only needed if ECOTWIN_LLM_API_KEY is set. The product is fully
+# functional without it.
 # anthropic>=0.40
-# Only needed if GEMINI_API_KEY is set for investigation reasoning.
-google-genai>=1.0
