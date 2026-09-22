@@ -496,3 +496,44 @@ export interface DemoState {
   data_end: string | null;
   seeded_at: string | null;
 }
+
+// --------------------------------------------------------------------------
+// IoT Telemetry & Hardware Edge Node (Step 8-10)
+// --------------------------------------------------------------------------
+export interface RawTelemetryItem {
+  id: number;
+  device_id: string;
+  building_id: number;
+  schema_version: string;
+  source: "esp32" | "simulator" | string;
+  device_timestamp?: string | null;
+  received_at: string;
+  interval_seconds: number;
+  water_level_pct: number | null;
+  water_level_cm: number | null;
+  flow_rate_lpm: number | null;
+  volume_liters: number | null;
+  tds_ppm: number | null;
+  turbidity_ntu: number | null;
+  pulse_count: number | null;
+  distance_raw_cm: number | null;
+  tds_voltage_mv: number | null;
+  turbidity_voltage_mv: number | null;
+  rssi_dbm: number | null;
+  uptime_seconds: number | null;
+  free_heap_bytes: number | null;
+  sensor_errors: string[];
+}
+
+export interface AggregatedReadingItem {
+  id: number;
+  building_id: number;
+  ts: string;
+  water_liters: number;
+  flow_lph: number;
+  water_level_pct: number | null;
+  tds_ppm: number | null;
+  turbidity_ntu: number | null;
+  source: "esp32" | "simulator" | string;
+}
+
