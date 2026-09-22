@@ -151,6 +151,14 @@ def _ingest_telemetry_packet(
         record.interval_seconds,
     )
 
+    if record.water_level_pct is not None and record.water_level_pct < 20.0:
+        logger.warning(
+            "ALERT [LOW_WATER_LEVEL]: device=%s building=%d water_level=%.1f%% (< 20.0%% safety threshold)",
+            record.device_id,
+            record.building_id,
+            record.water_level_pct,
+        )
+
     return TelemetryIngestionResponse(
         success=True,
         message="Telemetry accepted",

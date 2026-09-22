@@ -8,6 +8,7 @@ import {
   CartesianGrid,
   ComposedChart,
   Line,
+  ReferenceLine,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -142,6 +143,20 @@ export function TelemetryHistoryChart({
                 strokeWidth={2}
                 fill={`url(#${gradientId}-level)`}
                 connectNulls
+              />
+              <ReferenceLine
+                yAxisId="left"
+                y={20}
+                stroke="rgb(var(--critical))"
+                strokeDasharray="4 4"
+                strokeWidth={1.5}
+                label={{
+                  value: "20% Alert Threshold",
+                  position: "insideBottomLeft",
+                  fill: "rgb(var(--critical))",
+                  fontSize: 10,
+                  fontWeight: 600,
+                }}
               />
               <Line
                 yAxisId="right"

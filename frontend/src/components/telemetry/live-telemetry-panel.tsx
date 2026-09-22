@@ -2,6 +2,7 @@
 
 import {
   Activity,
+  AlertTriangle,
   Building2,
   Clock,
   Cpu,
@@ -12,6 +13,8 @@ import {
   SignalHigh,
   SignalLow,
   SignalMedium,
+  Volume2,
+  VolumeX,
   Wifi,
 } from "lucide-react";
 import * as React from "react";
@@ -91,6 +94,59 @@ export function LiveTelemetryPanel({
   const activeTimestamp = latest?.device_timestamp || latest?.received_at || null;
   const isEsp32Source = latest?.source?.toLowerCase() === "esp32";
 
+  // Check if water level is critically low (< 20%)
+  const isLowWaterAlert =
+    latest?.water_level_pct !== null &&
+    latest?.water_level_pct !== undefined &&
+    latest.water_level_pct < 20.0;
+
+  // Audio alert chime toggle state
+  const [audioAlertEnabled, setAudioAlertEnabled] = React.useState(false);
+  const lastAlertPacketIdRef = React.useRef<number | null>(null);
+
+  // Synthesize pleasant discrete dual-tone chime (Web Audio API)
+  const playAlertChime = React.useCallback(() => {
+    try {
+      const AudioCtx =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const osc1 = ctx.createOscillator();
+      const osc2 = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc1.type = "triangle";
+      osc1.frequency.setValueAtTime(880, ctx.currentTime); // A5
+      osc1.frequency.exponentialRampToValueAtTime(659.25, ctx.currentTime + 0.2); // E5
+
+      osc2.type = "sine";
+      osc2.frequency.setValueAtTime(440, ctx.currentTime);
+
+      gain.gain.setValueAtTime(0.15, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
+
+      osc1.connect(gain);
+      osc2.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc1.start();
+      osc2.start();
+      osc1.stop(ctx.currentTime + 0.36);
+      osc2.stop(ctx.currentTime + 0.36);
+    } catch {
+      // Audio autoplay policy may block until interaction
+    }
+  }, []);
+
+  // Trigger audio alert when low water condition is active and a new packet arrives
+  React.useEffect(() => {
+    if (isLowWaterAlert && audioAlertEnabled && latest && latest.id !== lastAlertPacketIdRef.current) {
+      lastAlertPacketIdRef.current = latest.id;
+      playAlertChime();
+    }
+  }, [isLowWaterAlert, audioAlertEnabled, latest, playAlertChime]);
+
   // Wi-Fi signal indicator icon
   const RssiIcon = React.useMemo(() => {
     const rssi = latest?.rssi_dbm;
@@ -108,15 +164,22 @@ export function LiveTelemetryPanel({
           <div className="flex items-center gap-2">
             <span className="eyebrow text-aqua">Physical Edge Telemetry</span>
             {latest ? (
-              isEsp32Source ? (
-                <Badge tone="aqua" dot pulse>
-                  Live ESP32 Node
-                </Badge>
-              ) : (
-                <Badge tone="neutral" dot>
-                  Simulator Feed
-                </Badge>
-              )
+              <div className="flex items-center gap-1.5">
+                {isEsp32Source ? (
+                  <Badge tone="aqua" dot pulse>
+                    Live ESP32 Node
+                  </Badge>
+                ) : (
+                  <Badge tone="neutral" dot>
+                    Simulator Feed
+                  </Badge>
+                )}
+                {isLowWaterAlert ? (
+                  <Badge tone="critical" pulse className="gap-1 px-1.5 py-0.5 text-[10px] font-bold">
+                    <AlertTriangle className="size-3 animate-pulse" /> Low Water Alert (&lt; 20%)
+                  </Badge>
+                ) : null}
+              </div>
             ) : isWaiting ? (
               <Badge tone="neutral">Waiting for Edge Node</Badge>
             ) : null}
@@ -144,6 +207,33 @@ export function LiveTelemetryPanel({
                 ))}
               </select>
             </div>
+          ) : null}
+
+          {/* Audio Alert Toggle */}
+          {latest ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                const next = !audioAlertEnabled;
+                setAudioAlertEnabled(next);
+                if (next && isLowWaterAlert) {
+                  playAlertChime();
+                }
+              }}
+              className={cn(
+                "h-7 px-2 text-xs",
+                audioAlertEnabled && isLowWaterAlert && "text-critical hover:text-critical/90",
+              )}
+              title={audioAlertEnabled ? "Audio alerts enabled (click to mute)" : "Audio alerts muted (click to enable)"}
+            >
+              {audioAlertEnabled ? (
+                <Volume2 className={cn("size-3.5", isLowWaterAlert && "animate-pulse text-critical")} />
+              ) : (
+                <VolumeX className="size-3.5 text-ink-muted" />
+              )}
+              <span className="hidden sm:inline">{audioAlertEnabled ? "Sound Alert On" : "Muted"}</span>
+            </Button>
           ) : null}
 
           {/* Refresh Button */}
@@ -256,6 +346,36 @@ export function LiveTelemetryPanel({
               </div>
             </div>
 
+            {/* Low Water Level Critical Alert Banner (< 20%) */}
+            {isLowWaterAlert && (
+              <div className="relative overflow-hidden rounded-xl border border-critical/50 bg-critical/10 p-4 shadow-sm backdrop-blur-sm animate-in fade-in slide-in-from-top-1 duration-300">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                  <div className="flex items-start gap-3">
+                    <div className="flex size-9 items-center justify-center rounded-lg bg-critical/20 text-critical shrink-0 animate-pulse mt-0.5 sm:mt-0">
+                      <AlertTriangle className="size-5" />
+                    </div>
+                    <div className="space-y-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h4 className="font-semibold text-sm tracking-tight text-ink">
+                          Critical Low Water Level Alert
+                        </h4>
+                        <Badge tone="critical" pulse className="px-1.5 py-0.5 text-[10px] font-bold">
+                          &lt; 20% Threshold
+                        </Badge>
+                        <span className="num font-bold text-xs text-critical">
+                          Level: {latest.water_level_pct?.toFixed(1)}%
+                          {latest.water_level_cm !== null ? ` (${latest.water_level_cm?.toFixed(1)} cm depth)` : ""}
+                        </span>
+                      </div>
+                      <p className="text-xs text-ink-soft leading-relaxed max-w-3xl">
+                        Water storage reservoir for <strong className="text-ink">{activeBuilding?.name || `Building ${latest.building_id}`}</strong> ({latest.device_id}) has fallen to <strong className="text-critical font-semibold">{latest.water_level_pct?.toFixed(1)}%</strong>, breaching the 20.0% critical operating safety limit. Immediate replenishment or pump activation is required to prevent air cavitation and supply disruption.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* 4 Sensor Metric Cards (Strict null vs zero) */}
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               {/* 1. Water Level (HC-SR04) */}
@@ -269,6 +389,12 @@ export function LiveTelemetryPanel({
                 secondaryLabel="Water Depth"
                 progressPct={latest.water_level_pct}
                 hasError={latest.sensor_errors.some((e) => e.startsWith("E_ULTRASONIC"))}
+                isAlert={isLowWaterAlert}
+                alertMessage={
+                  isLowWaterAlert
+                    ? `Critical Low: ${latest.water_level_pct?.toFixed(1)}% (< 20% safety threshold). Refill required.`
+                    : undefined
+                }
               />
 
               {/* 2. Flow Rate (YF-S201) */}
