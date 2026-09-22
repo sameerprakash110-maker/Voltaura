@@ -11,9 +11,9 @@ from sqlalchemy.orm import Session
 from ml.root_cause import build_context, diagnose
 
 from ..database import get_db
-from ..models import Anomaly, AnomalyStatus, Recommendation
-from ..schemas import AnomalyDetail, AnomalyOut
-from ..services import analytics, llm, pipeline, settings_service
+from ..models import Anomaly, AnomalyStatus, Intervention, Recommendation
+from ..schemas import AnomalyDetail, AnomalyOut, InterventionOut
+from ..services import analytics, intervention_service, llm, pipeline, settings_service, verification_service
 from ..services.investigation.investigator import investigate
 from ..services.investigation.agent import investigate_anomaly
 from .common import (
@@ -80,11 +80,10 @@ def get_anomaly(
     # Show the whole window the anomaly sits in, with a little context on
     # either side, rather than an arbitrary fixed range.
     span_days = max(7, min(90, (anomaly.end_ts - anomaly.start_ts).days + 8))
-    series = analytics.building_series(
-        db, building, anomaly.resource_type, span_days, flagged
-    )
-
     df = pipeline.load_frame(db, building, anomaly.resource_type)
+    series = analytics.building_series(
+        db, building, anomaly.resource_type, span_days, flagged, frame=df
+    )
     context = build_context(df, [pd.Timestamp(t) for t in (anomaly.intervals or [])],
                             anomaly.resource_type, building)
 
@@ -121,6 +120,33 @@ def get_anomaly(
         context={k: v for k, v in context.items() if k != "valid"},
         hourly_profile=hourly_profile,
     )
+
+
+@router.get("/anomalies/{anomaly_id}/intervention", response_model=InterventionOut | None)
+def get_anomaly_intervention(
+    anomaly_id: int,
+    db: Session = Depends(get_db),
+) -> InterventionOut | None:
+    """Return the intervention linked to this anomaly, if one exists."""
+    anomaly = get_anomaly_or_404(db, anomaly_id)
+    recommendation = db.execute(
+        select(Recommendation).where(Recommendation.anomaly_id == anomaly.id)
+    ).scalars().first()
+    if recommendation is None:
+        return None
+    intervention = db.execute(
+        select(Intervention)
+        .where(Intervention.recommendation_id == recommendation.id)
+        .order_by(Intervention.implemented_at.desc())
+    ).scalars().first()
+    if intervention is None:
+        return None
+    verification = verification_service.latest_for_intervention(db, intervention.id)
+    return InterventionOut(**intervention_payload(
+        intervention, building_lookup(db),
+        intervention_service.monitoring_progress(db, intervention),
+        recommendation, verification,
+    ))
 
 
 @router.get("/anomalies/{anomaly_id}/investigation")

@@ -8,6 +8,7 @@ import {
   Search,
   XCircle,
 } from "lucide-react";
+import * as React from "react";
 
 import {
   Badge,
@@ -252,8 +253,13 @@ function InvestigationContent({ data }: { data: InvestigationResponse }) {
 }
 
 export function InvestigationPanel({ anomalyId }: { anomalyId: number }) {
+  const [started, setStarted] = React.useState(false);
+  React.useEffect(() => {
+    const timer = window.setTimeout(() => setStarted(true), 0);
+    return () => window.clearTimeout(timer);
+  }, []);
   const { data, error, loading, refetch } = useApi<InvestigationResponse>(
-    `/api/anomalies/${anomalyId}/investigation`,
+    started ? `/api/anomalies/${anomalyId}/investigation` : null,
     [anomalyId],
   );
 
@@ -266,7 +272,7 @@ export function InvestigationPanel({ anomalyId }: { anomalyId: number }) {
         action={<Badge tone="aqua">Deterministic</Badge>}
       />
 
-      {loading && !data ? (
+      {(!started || loading) && !data ? (
         <div className="space-y-3 px-5 pb-5">
           <Skeleton className="h-20 w-full" />
           <Skeleton className="h-28 w-full" />

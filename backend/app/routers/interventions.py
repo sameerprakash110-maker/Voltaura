@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from ..database import get_db
 from ..models import Intervention, InterventionStatus, Recommendation
@@ -26,12 +26,16 @@ from .common import (
 router = APIRouter(tags=["interventions"])
 
 
-def _out(db: Session, intervention: Intervention) -> InterventionOut:
+def _out(db: Session, intervention: Intervention, buildings=None, verifications=None) -> InterventionOut:
     progress = intervention_service.monitoring_progress(db, intervention)
-    rec = db.get(Recommendation, intervention.recommendation_id) if intervention.recommendation_id else None
-    ver = verification_service.latest_for_intervention(db, intervention.id)
+    rec = intervention.recommendation or (
+        db.get(Recommendation, intervention.recommendation_id)
+        if intervention.recommendation_id else None
+    )
+    ver = (verifications or {}).get(intervention.id) if verifications is not None else \
+        verification_service.latest_for_intervention(db, intervention.id)
     return InterventionOut(**intervention_payload(
-        intervention, building_lookup(db), progress, rec, ver
+        intervention, buildings if buildings is not None else building_lookup(db), progress, rec, ver
     ))
 
 
@@ -41,13 +45,15 @@ def list_interventions(
     status: str = Query("ALL"),
     db: Session = Depends(get_db),
 ) -> list[InterventionOut]:
-    query = select(Intervention)
+    query = select(Intervention).options(joinedload(Intervention.recommendation))
     if building_id is not None:
         query = query.where(Intervention.building_id == building_id)
     if status != "ALL":
         query = query.where(Intervention.status == status)
     rows = db.execute(query.order_by(Intervention.implemented_at.desc())).scalars().all()
-    return [_out(db, i) for i in rows]
+    buildings = building_lookup(db)
+    verifications = verification_service.latest_by_intervention(db, [i.id for i in rows])
+    return [_out(db, i, buildings, verifications) for i in rows]
 
 
 @router.get("/interventions/{intervention_id}", response_model=InterventionOut)

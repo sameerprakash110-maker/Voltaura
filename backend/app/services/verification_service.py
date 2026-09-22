@@ -160,13 +160,32 @@ def latest_per_intervention(db: Session) -> list[VerificationResult]:
     interventions = db.execute(
         select(Intervention).order_by(Intervention.implemented_at.desc())
     ).scalars().all()
+    results = db.execute(
+        select(VerificationResult).order_by(
+            VerificationResult.created_at.desc(), VerificationResult.id.desc()
+        )
+    ).scalars().all()
+    latest: dict[int, VerificationResult] = {}
+    for result in results:
+        latest.setdefault(result.intervention_id, result)
+    return [latest[i.id] for i in interventions if i.id in latest]
 
-    results = []
-    for intervention in interventions:
-        latest = latest_for_intervention(db, intervention.id)
-        if latest is not None:
-            results.append(latest)
-    return results
+
+def latest_by_intervention(
+    db: Session, intervention_ids: list[int]
+) -> dict[int, VerificationResult]:
+    """Load the newest result for each requested intervention in one query."""
+    if not intervention_ids:
+        return {}
+    results = db.execute(
+        select(VerificationResult)
+        .where(VerificationResult.intervention_id.in_(intervention_ids))
+        .order_by(VerificationResult.created_at.desc(), VerificationResult.id.desc())
+    ).scalars().all()
+    latest: dict[int, VerificationResult] = {}
+    for result in results:
+        latest.setdefault(result.intervention_id, result)
+    return latest
 
 
 def run_monitoring_then_verify(

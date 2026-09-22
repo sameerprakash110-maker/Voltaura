@@ -86,25 +86,21 @@ export default function AnomalyDetailPage() {
   const [verification, setVerification] = React.useState<Verification | null>(null);
 
   // Pick up an intervention/verification that already exists for this anomaly.
-  const existing = useApi<Intervention[]>("/api/interventions");
+  const existing = useApi<Intervention | null>(
+    Number.isFinite(id) ? `/api/anomalies/${id}/intervention` : null,
+    [id],
+  );
   React.useEffect(() => {
-    if (!data?.recommendation || !existing.data) return;
-    const match = existing.data.find(
-      (i) => i.recommendation_id === data.recommendation?.id,
-    );
-    if (match) setIntervention(match);
-  }, [data?.recommendation, existing.data]);
+    if (existing.data !== null) setIntervention(existing.data);
+  }, [existing.data]);
 
   const verificationQuery = useApi<Verification[]>(
-    intervention ? `/api/verification?latest_only=true` : null,
+    intervention ? `/api/verification?intervention_id=${intervention.id}&latest_only=true` : null,
     [intervention?.id],
   );
   React.useEffect(() => {
     if (!intervention || !verificationQuery.data) return;
-    const match = verificationQuery.data.find(
-      (v) => v.intervention_id === intervention.id,
-    );
-    if (match) setVerification(match);
+    setVerification(verificationQuery.data[0] ?? null);
   }, [intervention, verificationQuery.data]);
 
   const applyMutation = useMutation(async (recommendationId: number) => {
