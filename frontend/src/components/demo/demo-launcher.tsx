@@ -86,7 +86,7 @@ function DemoContent({ onClose }: { onClose: () => void }) {
             Walk the loop in three minutes
           </Dialog.Title>
           <Dialog.Description className="mt-1.5 max-w-lg text-xs leading-relaxed text-ink-muted">
-            Each scenario is a real fault in the seeded telemetry. EcoTwin found
+            Each scenario is a real fault in the seeded telemetry. VOLTAURA found
             it independently -- nothing below is pre-written. Pick one to jump
             straight to the diagnosis, then apply the intervention and verify
             the saving.

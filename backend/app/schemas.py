@@ -1,4 +1,4 @@
-"""Pydantic response and request models for the EcoTwin API."""
+"""Pydantic response and request models for the VOLTAURA API."""
 from __future__ import annotations
 
 from datetime import datetime

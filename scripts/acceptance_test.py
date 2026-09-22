@@ -1,5 +1,5 @@
 """
-EcoTwin acceptance test.
+VOLTAURA acceptance test.
 
 Drives the entire product loop over HTTP against a running backend and asserts
 every item on the project's acceptance checklist. Exits non-zero on any failure.
@@ -61,13 +61,13 @@ def section(title: str) -> None:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="EcoTwin acceptance test")
+    parser = argparse.ArgumentParser(description="VOLTAURA acceptance test")
     parser.add_argument("--no-reseed", action="store_true",
                         help="leave the mutated database in place")
     args = parser.parse_args()
 
     print("=" * 74)
-    print("  EcoTwin - acceptance test")
+    print("  VOLTAURA - acceptance test")
     print("=" * 74)
 
     # ---- infrastructure ------------------------------------------------
@@ -82,9 +82,9 @@ def main() -> int:
     check("Database initialises", health.get("database") == "connected")
     check("Seed data loads", health.get("seeded") is True,
           f"{health.get('buildings')} buildings")
-    check("Energy telemetry present", health.get("energy_readings", 0) >= 10000,
+    check("Energy telemetry present", health.get("energy_readings", 0) >= 14000,
           f"{health.get('energy_readings'):,} intervals")
-    check("Water telemetry present", health.get("water_readings", 0) >= 10000,
+    check("Water telemetry present", health.get("water_readings", 0) >= 14000,
           f"{health.get('water_readings'):,} intervals")
 
     # ---- dashboard -----------------------------------------------------
@@ -96,7 +96,7 @@ def main() -> int:
           any(k.get("change_pct") is not None for k in dash.get("kpis", [])))
     check("Campus time series populated", len(dash.get("series", [])) > 0,
           f"{len(dash.get('series', []))} points")
-    check("Building comparison populated", len(dash.get("buildings", [])) == 5)
+    check("Building comparison populated", len(dash.get("buildings", [])) == 7)
     check("Pipeline stages exposed", len(dash.get("pipeline", {}).get("stages", [])) == 7)
     for days in (7, 30, 90):
         status, _ = call("GET", f"/api/dashboard?days={days}")
@@ -108,7 +108,8 @@ def main() -> int:
     # ---- digital twin --------------------------------------------------
     section("Digital twin")
     status, buildings = call("GET", "/api/buildings?days=30")
-    check("Buildings endpoint powers the twin", status == 200 and len(buildings) == 5)
+    check("Buildings endpoint powers the twin", status == 200 and len(buildings) == 7,
+          f"{len(buildings)} RIT blocks")
     check("Twin geometry present on every building",
           all(b.get("twin_w", 0) > 0 and b.get("twin_h", 0) > 0 for b in buildings))
     check("Buildings carry a status for colouring",

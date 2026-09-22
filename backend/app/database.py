@@ -3,7 +3,7 @@ Database engine / session plumbing.
 
 The layer is deliberately dialect-agnostic: the only SQLite-specific bit is the
 `connect_args` / PRAGMA block, which is skipped for any other URL.  Pointing
-ECOTWIN_DATABASE_URL at `postgresql+psycopg://...` is the whole migration.
+VOLTAURA_DATABASE_URL at `postgresql+psycopg://...` is the whole migration.
 """
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-# EcoTwin backend + ML dependencies
+# VOLTAURA backend + ML dependencies
 # Install with:  pip install -r backend/requirements.txt
 
 # --- API ---------------------------------------------------------------
@@ -10,7 +10,7 @@ python-dotenv>=1.0
 
 # --- persistence -------------------------------------------------------
 SQLAlchemy>=2.0
-# For PostgreSQL, uncomment and point ECOTWIN_DATABASE_URL at
+# For PostgreSQL, uncomment and point VOLTAURA_DATABASE_URL at
 # postgresql+psycopg://user:pass@host/db
 # psycopg[binary]>=3.2
 
@@ -21,7 +21,7 @@ scikit-learn>=1.5
 scipy>=1.13
 
 # --- optional ----------------------------------------------------------
-# Only needed if ECOTWIN_LLM_API_KEY is set for narrative enrichment.
+# Only needed if VOLTAURA_LLM_API_KEY is set for narrative enrichment.
 # anthropic>=0.40
 # Only needed if GEMINI_API_KEY is set for investigation reasoning.
 google-genai>=1.0

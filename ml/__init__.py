@@ -1,5 +1,5 @@
 """
-EcoTwin ML package.
+VOLTAURA ML package.
 
   simulator            - physics-inspired building telemetry generator (the
                          stand-in for a real IoT/BMS feed)

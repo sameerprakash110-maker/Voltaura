@@ -32,7 +32,7 @@ interface AppState {
 
 const Context = React.createContext<AppState | null>(null);
 
-const STORAGE_KEY = "ecotwin.prefs.v1";
+const STORAGE_KEY = "voltaura.prefs.v1";
 
 interface StoredPrefs {
   range?: RangeDays;

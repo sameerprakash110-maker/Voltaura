@@ -233,7 +233,7 @@ export default function SettingsPage() {
             <Sparkles className="mt-0.5 size-4 shrink-0 text-iris" />
             <div>
               <p className="text-[12.5px] leading-relaxed text-ink-soft">
-                EcoTwin runs completely without an LLM. Detection, diagnosis,
+                VOLTAURA runs completely without an LLM. Detection, diagnosis,
                 recommendations and verification are all deterministic and
                 computed locally. When an API key is present, the LLM is used
                 for exactly one thing: rewriting an already-computed diagnosis
@@ -244,7 +244,7 @@ export default function SettingsPage() {
               <p className="mt-3 font-mono text-[11px] text-ink-muted">
                 {data?.llm_enabled
                   ? `Model: ${data.llm_model}`
-                  : "Set ECOTWIN_LLM_API_KEY in your environment to enable."}
+                  : "Set VOLTAURA_LLM_API_KEY in your environment to enable."}
               </p>
             </div>
           </div>

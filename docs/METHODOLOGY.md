@@ -1,4 +1,4 @@
-# EcoTwin methodology
+# VOLTAURA methodology
 
 Technical reference for the four analytical stages. The [README](../README.md) gives the
 overview; this document explains the reasoning behind each design decision, including the
@@ -8,7 +8,7 @@ ones that look unusual.
 
 ## 0. The single idea
 
-Everything in EcoTwin follows from one distinction:
+Everything in VOLTAURA follows from one distinction:
 
 | | Examples | Role |
 |---|---|---|
@@ -170,7 +170,7 @@ goes away costs more than one large spike.
 
 ### Measured performance
 
-5 planted faults, 5 detected, 5 events, **0 false positives** across 21,600 intervals.
+5 planted faults, 5 detected, 5 events, **0 false positives** across 30,240 intervals.
 
 > **On recall.** Interval-level recall against "every hour inside the fault window" is
 > intentionally low (13–67%) and that is *correct*. A constant 17 kW parasitic draw is only
@@ -223,7 +223,7 @@ confidence   = clip(score × margin_factor × sample_factor, 0, 0.94)
 Three deliberate properties:
 
 - **Discounted for ambiguity.** A cause that only narrowly beats its alternative is reported
-  with lower confidence. The Student Center pump fault scores 0.88 rather than 0.94 precisely
+  with lower confidence. The Multipurpose Block pump fault scores 0.88 rather than 0.94 precisely
   because "water leakage" is a genuinely plausible competing reading of persistent night flow.
 - **Discounted for sample size.** Three anomalous hours support a weaker claim than ninety.
 - **Capped below certainty (0.94).** A rule engine can establish a *signature*. It cannot
@@ -284,7 +284,7 @@ the fastest way to demonstrate that the system measures rather than asserts.
 Only a `VERIFIED` saving is annualised. Projecting an unverified or negative result would
 misrepresent it.
 
-### Worked example (Engineering Block HVAC)
+### Worked example (ESB Block HVAC)
 
 | | |
 |---|---|
@@ -327,7 +327,7 @@ does not change at all.
 
 **Module:** [`backend/app/services/llm.py`](../backend/app/services/llm.py)
 
-EcoTwin runs the complete loop with no API key. When one is configured, the LLM does exactly
+VOLTAURA runs the complete loop with no API key. When one is configured, the LLM does exactly
 one job: rewrite an already-computed diagnosis into a fluent paragraph.
 
 The constraints that make this safe:

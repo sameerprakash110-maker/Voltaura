@@ -1,5 +1,5 @@
 """
-Central configuration for EcoTwin.
+Central configuration for VOLTAURA.
 
 Every tariff / emission-factor / threshold used anywhere in the savings maths
 lives here (or in the `app_settings` table, which overrides these defaults at
@@ -23,18 +23,18 @@ DATA_DIR.mkdir(parents=True, exist_ok=True)
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=(ROOT_DIR / ".env", BACKEND_DIR / ".env"),
-        env_prefix="ECOTWIN_",
+        env_prefix="VOLTAURA_",
         extra="ignore",
     )
 
     # ---- application -------------------------------------------------
-    app_name: str = "EcoTwin API"
+    app_name: str = "VOLTAURA API"
     environment: str = "development"
 
     # ---- database ----------------------------------------------------
     # SQLite for local dev.  Swap for a postgresql+psycopg:// URL and the
     # rest of the stack works unchanged (see backend/app/database.py).
-    database_url: str = f"sqlite:///{(DATA_DIR / 'ecotwin.db').as_posix()}"
+    database_url: str = f"sqlite:///{(DATA_DIR / 'voltaura.db').as_posix()}"
 
     # ---- CORS --------------------------------------------------------
     cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
@@ -60,7 +60,7 @@ class Settings(BaseSettings):
     min_deviation_pct: float = 12.0
     event_merge_gap_hours: int = 3
     min_event_duration_hours: int = 3
-    event_cluster_gap_hours: int = 72
+    event_cluster_gap_hours: int = 168
 
     # ---- synthetic data ----------------------------------------------
     history_days: int = 90

@@ -1,4 +1,4 @@
-"""SQLAlchemy ORM models for EcoTwin."""
+"""SQLAlchemy ORM models for VOLTAURA."""
 from __future__ import annotations
 
 import enum

@@ -1,5 +1,5 @@
 """
-Seed EcoTwin with a complete, demo-ready deployment.
+Seed VOLTAURA with a complete, demo-ready deployment.
 
 Runs the whole product loop once, end to end:
 
@@ -51,7 +51,7 @@ from ml.campus import BUILDINGS, FAULT_PLAN  # noqa: E402
 
 # Faults already remediated inside the history window. Seeding an intervention
 # at the moment each was fixed gives the app verified savings on first load.
-HISTORICAL_SCENARIOS = ["ups-cse", "pump-student-center"]
+HISTORICAL_SCENARIOS = ["ups-apex", "pump-mpb"]
 
 
 def banner(step: str, message: str) -> None:
@@ -128,7 +128,7 @@ def seed_historical_interventions(db) -> list[Intervention]:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Seed the EcoTwin database")
+    parser = argparse.ArgumentParser(description="Seed the VOLTAURA database")
     parser.add_argument("--days", type=int, default=settings.history_days,
                         help="days of hourly history to generate")
     parser.add_argument("--keep", action="store_true",
@@ -137,7 +137,7 @@ def main() -> int:
 
     started = time.perf_counter()
     print("=" * 66)
-    print("  EcoTwin - seeding the demo deployment")
+    print("  VOLTAURA - seeding the demo deployment")
     print("=" * 66)
     print(f"  database : {settings.database_url}")
     print(f"  history  : {args.days} days at hourly resolution")

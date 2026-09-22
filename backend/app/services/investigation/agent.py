@@ -66,7 +66,7 @@ def _tool_evidence(tool_name: str, result: Mapping[str, Any]) -> dict[str, Any]:
         "label": tool_name,
         "value": {key: value for key, value in result.items() if key not in {"available", "status"}},
         "source": f"tool:{tool_name}",
-        "meaning": "Measured/contextual data returned by an existing EcoTwin tool.",
+        "meaning": "Measured/contextual data returned by an existing VOLTAURA tool.",
     }
 
 

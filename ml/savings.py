@@ -1,7 +1,7 @@
 """
 Savings verification (measurement & verification).
 
-This is the stage that separates EcoTwin from a dashboard: it does not report
+This is the stage that separates VOLTAURA from a dashboard: it does not report
 the saving a recommendation *promised*, it measures the saving the building
 actually delivered.
 

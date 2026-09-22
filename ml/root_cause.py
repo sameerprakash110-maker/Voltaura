@@ -233,6 +233,12 @@ def _ratio_pct(x: float) -> str:
 
 
 def _rule_hvac(c: dict) -> tuple[float, list[Evidence]]:
+    # Electricity only. Without this gate the rule can win on a *water*
+    # anomaly purely because the water frame carries no runtime columns, so
+    # the "lighting is normal" and "HVAC is not the cause" conditions score as
+    # satisfied by default.
+    if c["resource_type"] != "ENERGY":
+        return 0.0, []
     ev = [
         Evidence("Consumption above expected", _pct(c["deviation_pct"]),
                  "at least +20%", c["deviation_pct"] >= 20, 1.0,
@@ -259,6 +265,9 @@ def _rule_hvac(c: dict) -> tuple[float, list[Evidence]]:
 
 
 def _rule_lighting(c: dict) -> tuple[float, list[Evidence]]:
+    # Electricity only, for the same reason as the HVAC rule above.
+    if c["resource_type"] != "ENERGY":
+        return 0.0, []
     ev = [
         Evidence("Consumption above expected", _pct(c["deviation_pct"]),
                  "at least +20%", c["deviation_pct"] >= 20, 1.0,

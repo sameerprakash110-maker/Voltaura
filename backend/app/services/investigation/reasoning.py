@@ -11,7 +11,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from .. import llm
 from .prompt import SYSTEM_PROMPT, build_user_prompt
 
-logger = logging.getLogger("ecotwin.investigation.reasoning")
+logger = logging.getLogger("voltaura.investigation.reasoning")
 
 
 class InvestigationDecision(BaseModel):

@@ -186,7 +186,7 @@ export default function BuildingDetailPage() {
             building.operating_hours_end,
           ).padStart(2, "0")}`}
         />
-        <Fact label="Built" value={num(building.year_built)} />
+        <Fact label="Built" value={String(building.year_built)} />
         <Fact
           label="Peak demand"
           value={num(stats.peak_demand_kw as number, 1)}

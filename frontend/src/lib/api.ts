@@ -77,7 +77,7 @@ async function request<T>(
     throw new ApiError(
       aborted
         ? "The request timed out. The analysis may still be running on the server."
-        : "Cannot reach the EcoTwin API.",
+        : "Cannot reach the VOLTAURA API.",
       {
         status: 0,
         offline: true,

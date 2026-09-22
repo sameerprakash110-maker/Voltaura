@@ -1,8 +1,8 @@
 {
-  "name": "ecotwin",
+  "name": "voltaura",
   "version": "1.0.0",
   "private": true,
-  "description": "EcoTwin - See Waste. Understand Why. Prove the Savings.",
+  "description": "VOLTAURA - See Waste. Understand Why. Prove the Savings.",
   "scripts": {
     "setup": "pip install -r backend/requirements.txt && npm --prefix frontend install && npm run seed",
     "seed": "python scripts/seed.py",
