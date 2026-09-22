@@ -44,7 +44,7 @@ export function useApi<T>(path: string | null, deps: unknown[] = []) {
         setState((prev) => ({ ...prev, loading: true, error: null }));
       }
       try {
-        const data = await api.get<T>(path);
+        const data = await api.getCached<T>(path);
         // Ignore a response that a newer request has already superseded.
         if (!alive.current || id !== requestId.current) return data;
         setState({ data, error: null, loading: false });

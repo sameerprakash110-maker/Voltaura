@@ -56,14 +56,21 @@ WATER_COLS = (
 # --------------------------------------------------------------------------
 def _frame(db: Session, columns, model, start: datetime, end: datetime,
            building_id: int | None = None) -> pd.DataFrame:
+    cache = db.info.setdefault("analytics_frames", {})
+    cache_key = (model, tuple(c.key for c in columns), start, end, building_id)
+    if cache_key in cache:
+        return cache[cache_key]
     query = select(*columns).where(model.ts >= start, model.ts <= end)
     if building_id is not None:
         query = query.where(model.building_id == building_id)
     rows = db.execute(query.order_by(model.ts)).all()
     if not rows:
-        return pd.DataFrame(columns=[c.key for c in columns])
+        df = pd.DataFrame(columns=[c.key for c in columns])
+        cache[cache_key] = df
+        return df
     df = pd.DataFrame(rows, columns=[c.key for c in columns])
     df["ts"] = pd.to_datetime(df["ts"])
+    cache[cache_key] = df
     return df
 
 
@@ -285,17 +292,25 @@ def campus_series(db: Session, days: int, resource: str = "ALL") -> list[dict[st
 def building_series(
     db: Session, building: Building, resource: str, days: int,
     anomalous_timestamps: set | None = None,
+    frame: pd.DataFrame | None = None,
 ) -> list[dict[str, Any]]:
     """One building's telemetry, with anomalous intervals marked."""
     start, end, _, _ = window(db, days)
     interval = pick_interval(days)
     anomalous_timestamps = anomalous_timestamps or set()
 
-    if resource == "ENERGY":
+    if frame is not None:
+        df = frame[(frame["ts"] >= start) & (frame["ts"] <= end)].copy()
+    elif resource == "ENERGY":
         df = energy_frame(db, start, end, building.id)
         value, expected = "energy_kwh", "expected_kwh"
     else:
         df = water_frame(db, start, end, building.id)
+        value, expected = "water_liters", "expected_liters"
+
+    if resource == "ENERGY":
+        value, expected = "energy_kwh", "expected_kwh"
+    else:
         value, expected = "water_liters", "expected_liters"
 
     if df.empty:

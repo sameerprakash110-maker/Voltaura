@@ -98,16 +98,27 @@ def get_dashboard(
         select(Intervention).order_by(Intervention.implemented_at.desc())
     ).scalars().all()
     intervention_out = []
-    for iv in interventions[:6]:
+    recent = interventions[:6]
+    recommendations_by_id = {
+        r.id: r for r in db.execute(
+            select(Recommendation).where(Recommendation.id.in_([
+                i.recommendation_id for i in recent if i.recommendation_id
+            ]))
+        ).scalars()
+    } if recent else {}
+    verification_by_intervention = verification_service.latest_by_intervention(
+        db, [i.id for i in recent]
+    )
+    for iv in recent:
         progress = intervention_service.monitoring_progress(db, iv)
-        rec = db.get(Recommendation, iv.recommendation_id) if iv.recommendation_id else None
-        ver = verification_service.latest_for_intervention(db, iv.id)
+        rec = recommendations_by_id.get(iv.recommendation_id)
+        ver = verification_by_intervention.get(iv.id)
         intervention_out.append(intervention_payload(iv, buildings, progress, rec, ver))
 
     # ---- latest verification per intervention --------------------------
     verifications = verification_service.latest_per_intervention(db)
     verification_out = [
-        verification_payload(v, buildings, db.get(Intervention, v.intervention_id))
+        verification_payload(v, buildings, next((i for i in interventions if i.id == v.intervention_id), None))
         for v in verifications[:6]
     ]
 

@@ -11,6 +11,7 @@ import os
 from functools import lru_cache
 from pathlib import Path
 
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 BACKEND_DIR = Path(__file__).resolve().parent.parent
@@ -71,6 +72,18 @@ class Settings(BaseSettings):
     llm_model: str = "claude-sonnet-5"
     llm_enabled: bool = True   # only has effect when a key is present
 
+    # ---- investigation reasoning provider ----------------------------
+    # These intentionally use unprefixed aliases so local development can
+    # configure the Gemini provider with GEMINI_API_KEY / GEMINI_MODEL.
+    gemini_api_key: str = Field(default="", validation_alias="GEMINI_API_KEY")
+    gemini_model: str = Field(
+        default="gemini-2.5-flash",
+        validation_alias="GEMINI_MODEL",
+    )
+    # ---- IoT & Telemetry Ingestion (Step 8) ----------------------------
+    sensor_api_key: str = "dev-secret-key-lib-01"
+    device_registry_json: str = ""
+
     @property
     def cors_origin_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
@@ -78,6 +91,42 @@ class Settings(BaseSettings):
     @property
     def llm_available(self) -> bool:
         return bool(self.llm_api_key) and self.llm_enabled
+
+    @property
+    def gemini_available(self) -> bool:
+        return bool(self.gemini_api_key)
+    def authorized_devices(self) -> dict[str, dict[str, any]]:
+        import json
+        registry: dict[str, dict[str, any]] = {
+            self.sensor_api_key: {
+                "device_id": "LIB-RISER-01",
+                "building_id": 4,
+            },
+            "dev-secret-key-change-in-production": {
+                "device_id": "LIB-RISER-01",
+                "building_id": 4,
+            },
+            "dev-sensor-key-admin-01": {
+                "device_id": "ADMIN-MAIN-01",
+                "building_id": 1,
+            },
+            "dev-sensor-key-engg-01": {
+                "device_id": "ENGG-RISER-01",
+                "building_id": 2,
+            },
+            "dev-sensor-key-unregistered-building": {
+                "device_id": "GHOST-01",
+                "building_id": 9999,
+            },
+        }
+        if self.device_registry_json:
+            try:
+                extra = json.loads(self.device_registry_json)
+                if isinstance(extra, dict):
+                    registry.update(extra)
+            except Exception:
+                pass
+        return registry
 
 
 @lru_cache

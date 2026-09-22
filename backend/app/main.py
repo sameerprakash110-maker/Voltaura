@@ -28,6 +28,7 @@ from .routers import (
     recommendations,
     reports,
     settings as settings_router,
+    telemetry,
     verification,
 )
 
@@ -125,6 +126,7 @@ for router in (
     verification.router,
     reports.router,
     settings_router.router,
+    telemetry.router,
     demo.router,
 ):
     app.include_router(router, prefix="/api")

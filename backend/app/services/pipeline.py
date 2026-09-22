@@ -37,6 +37,8 @@ from ..models import (
     WaterReading,
 )
 from . import settings_service
+from .investigation import investigator
+from .investigation.recommendation_evidence import normalize_investigation_evidence
 
 READING_MODEL = {"ENERGY": EnergyReading, "WATER": WaterReading}
 
@@ -242,6 +244,14 @@ def analyse_building(
         db.add(anomaly)
         db.flush()
 
+        investigation = investigator.investigate(
+            {
+                column.name: getattr(anomaly, column.name)
+                for column in anomaly.__table__.columns
+            },
+            context,
+        )
+
         draft = build_recommendation(
             diagnosis,
             context,
@@ -251,6 +261,10 @@ def analyse_building(
             grid_emission_factor=economics["grid_emission_factor"],
             water_emission_factor=economics["water_emission_factor"],
         )
+        draft.evidence = [
+            *draft.evidence,
+            *normalize_investigation_evidence(investigation),
+        ]
 
         db.add(
             Recommendation(
