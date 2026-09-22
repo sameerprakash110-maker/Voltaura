@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 
 import { AppStateProvider } from "@/components/providers/app-state";
+import { AuthProvider } from "@/components/providers/auth";
 
 import "./globals.css";
 
@@ -61,7 +62,9 @@ export default function RootLayout({
         />
       </head>
       <body>
-        <AppStateProvider>{children}</AppStateProvider>
+        <AuthProvider>
+          <AppStateProvider>{children}</AppStateProvider>
+        </AuthProvider>
       </body>
     </html>
   );

@@ -498,3 +498,58 @@ class RawWaterTelemetry(Base):
     raw_payload: Mapped[dict | None] = mapped_column(JSON, nullable=True)
 
     building: Mapped[Building] = relationship(back_populates="raw_water_telemetry")
+
+
+# --------------------------------------------------------------------------
+# Authentication: users and one-time passcodes
+#
+# There is no password column anywhere in this schema, and that is deliberate:
+# the only way to prove control of an account is to receive a short-lived code
+# at the registered address. Codes are stored as salted hashes so a database
+# leak does not hand over a live login.
+# --------------------------------------------------------------------------
+class User(Base):
+    __tablename__ = "users"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    email: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
+    name: Mapped[str] = mapped_column(String(120), default="")
+    role: Mapped[str] = mapped_column(String(32), default="operator")
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
+    last_login_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    # Bumped on logout-everywhere so previously issued tokens stop validating.
+    token_version: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+
+    otp_codes: Mapped[list["OtpCode"]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
+    )
+
+
+class OtpCode(Base):
+    __tablename__ = "otp_codes"
+    __table_args__ = (
+        Index("ix_otp_codes_user_created", "user_id", "created_at"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+
+    # sha256(code + per-row salt). The plaintext code never touches the disk.
+    code_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    salt: Mapped[str] = mapped_column(String(32), nullable=False)
+
+    expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    consumed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    attempts: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+
+    purpose: Mapped[str] = mapped_column(String(32), default="login", nullable=False)
+    delivery: Mapped[str] = mapped_column(String(16), default="email", nullable=False)
+    request_ip: Mapped[str] = mapped_column(String(64), default="")
+
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
+
+    user: Mapped[User] = relationship(back_populates="otp_codes")

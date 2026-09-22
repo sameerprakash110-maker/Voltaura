@@ -11,6 +11,49 @@
 export const API_BASE =
   process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "http://127.0.0.1:8000";
 
+/**
+ * Session token.
+ *
+ * Held in a module variable so every request picks it up without threading it
+ * through call sites, and mirrored into localStorage so a refresh keeps the
+ * session. Clearing it also drops the GET cache, so one user's data can never
+ * be served to the next.
+ */
+const TOKEN_STORAGE_KEY = "voltaura.session.v1";
+
+let authToken: string | null = null;
+
+export function setAuthToken(token: string | null): void {
+  authToken = token;
+  if (typeof window === "undefined") return;
+  try {
+    if (token) window.localStorage.setItem(TOKEN_STORAGE_KEY, token);
+    else window.localStorage.removeItem(TOKEN_STORAGE_KEY);
+  } catch {
+    /* private browsing: the session simply does not survive a refresh */
+  }
+  invalidateGetCache();
+}
+
+export function getAuthToken(): string | null {
+  if (authToken) return authToken;
+  if (typeof window === "undefined") return null;
+  try {
+    authToken = window.localStorage.getItem(TOKEN_STORAGE_KEY);
+  } catch {
+    authToken = null;
+  }
+  return authToken;
+}
+
+/** Fired when the API rejects our token, so the app can bounce to /login. */
+type UnauthorizedHandler = () => void;
+let onUnauthorized: UnauthorizedHandler | null = null;
+
+export function setUnauthorizedHandler(handler: UnauthorizedHandler | null): void {
+  onUnauthorized = handler;
+}
+
 export class ApiError extends Error {
   readonly status: number;
   readonly offline: boolean;
@@ -68,7 +111,11 @@ async function request<T>(
     response = await fetch(`${API_BASE}${path}`, {
       ...rest,
       signal: controller.signal,
-      headers: { "Content-Type": "application/json", ...(rest.headers ?? {}) },
+      headers: {
+        "Content-Type": "application/json",
+        ...(getAuthToken() ? { Authorization: `Bearer ${getAuthToken()}` } : {}),
+        ...(rest.headers ?? {}),
+      },
       cache: "no-store",
     });
   } catch (error) {
@@ -102,6 +149,12 @@ async function request<T>(
   }
 
   if (!response.ok) {
+    // An expired or revoked token invalidates every screen at once, so the
+    // app is told immediately rather than letting each panel fail on its own.
+    if (response.status === 401 && !path.startsWith("/api/auth/")) {
+      setAuthToken(null);
+      onUnauthorized?.();
+    }
     throw new ApiError(
       extractDetail(body, `Request failed with status ${response.status}`),
       {

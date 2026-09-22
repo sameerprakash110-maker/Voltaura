@@ -19,6 +19,7 @@ from .config import settings
 from .database import engine, init_db
 from .routers import (
     anomalies,
+    auth,
     buildings,
     dashboard,
     demo,
@@ -117,6 +118,7 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONR
 
 for router in (
     health.router,
+    auth.router,
     dashboard.router,
     buildings.router,
     readings.router,

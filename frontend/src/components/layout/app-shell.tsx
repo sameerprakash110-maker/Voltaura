@@ -10,6 +10,7 @@ import {
   Menu,
   Moon,
   Radar,
+  LogOut,
   Settings2,
   Sun,
   Wrench,
@@ -23,6 +24,7 @@ import { VOLTAURAMark } from "@/components/brand/mark";
 import { DemoLauncher } from "@/components/demo/demo-launcher";
 import { Button, Segmented, StatusDot } from "@/components/ui/primitives";
 import { useAppState } from "@/components/providers/app-state";
+import { useAuth } from "@/components/providers/auth";
 import { telemetryStamp } from "@/lib/format";
 import type { RangeDays, ResourceFilter } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -157,6 +159,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           ))}
         </nav>
 
+        <AccountBlock />
         <SystemStatus />
       </aside>
 
@@ -237,6 +240,37 @@ function TopBar({ onMenu }: { onMenu: () => void }) {
         </div>
       </div>
     </header>
+  );
+}
+
+
+// --------------------------------------------------------------------------
+function AccountBlock() {
+  const { user, logout } = useAuth();
+  if (!user) return null;
+
+  return (
+    <div className="border-t border-[rgb(var(--line)/0.08)] px-4 py-3">
+      <div className="flex items-center gap-2.5">
+        <span className="flex size-6 shrink-0 items-center justify-center rounded-sm border border-[rgb(var(--line)/0.14)] text-[10px] font-semibold uppercase text-ink-soft">
+          {(user.name || user.email).trim().charAt(0)}
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-[11.5px] font-medium text-ink">
+            {user.name || user.email}
+          </div>
+          <div className="truncate text-[10px] text-ink-faint">{user.email}</div>
+        </div>
+        <button
+          onClick={() => void logout()}
+          title="Sign out"
+          aria-label="Sign out"
+          className="shrink-0 text-ink-faint transition-colors hover:text-ink-soft"
+        >
+          <LogOut className="size-3.5" />
+        </button>
+      </div>
+    </div>
   );
 }
 

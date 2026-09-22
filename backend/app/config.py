@@ -80,9 +80,56 @@ class Settings(BaseSettings):
         default="gemini-2.5-flash",
         validation_alias="GEMINI_MODEL",
     )
+    # ---- authentication & OTP email verification -----------------------
+    # The signing secret MUST be overridden in any deployment. A generated
+    # per-process fallback keeps local development working but invalidates
+    # every session on restart, which is the safe way to fail.
+    auth_secret_key: str = ""
+    auth_token_ttl_hours: int = 168          # 7 days
+    otp_length: int = 6
+    otp_ttl_minutes: int = 10
+    otp_max_attempts: int = 5                # wrong guesses before the code dies
+    otp_max_requests_per_window: int = 5     # resend throttle
+    otp_request_window_minutes: int = 15
+
+    # SMTP. With nothing configured the OTP is written to the server log
+    # instead of being emailed, so the flow is demonstrable offline.
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_user: str = ""
+    smtp_password: str = ""
+    smtp_from: str = "VOLTAURA <no-reply@voltaura.local>"
+    smtp_starttls: bool = True
+
+    # Restrict who may sign in, e.g. "ritindia.edu,gmail.com". Empty = anyone.
+    auth_allowed_email_domains: str = ""
+
     # ---- IoT & Telemetry Ingestion (Step 8) ----------------------------
     sensor_api_key: str = "dev-secret-key-lib-01"
     device_registry_json: str = ""
+
+    @property
+    def smtp_configured(self) -> bool:
+        """
+        True only when SMTP can actually authenticate and send.
+
+        A half-filled config (host set, password missing) falls back to the
+        console instead of failing every login with a 502, so a partially
+        configured box degrades rather than breaks.
+        """
+        if not (self.smtp_host and self.smtp_from):
+            return False
+        if self.smtp_user and not self.smtp_password:
+            return False
+        return True
+
+    @property
+    def allowed_email_domain_list(self) -> list[str]:
+        return [
+            d.strip().lower().lstrip("@")
+            for d in self.auth_allowed_email_domains.split(",")
+            if d.strip()
+        ]
 
     @property
     def cors_origin_list(self) -> list[str]:
