@@ -1,7 +1,7 @@
 """
 Optional LLM narrative enrichment.
 
-STRICTLY OPTIONAL. EcoTwin works completely without an API key: detection,
+STRICTLY OPTIONAL. VOLTAURA works completely without an API key: detection,
 diagnosis, recommendations and verification are all deterministic and run
 locally. If a key is configured, the LLM is used for exactly one thing --
 rewriting an already-computed diagnosis into a fluent paragraph for a facilities
@@ -26,7 +26,7 @@ import logging
 
 from ..config import settings
 
-logger = logging.getLogger("ecotwin.llm")
+logger = logging.getLogger("voltaura.llm")
 
 SYSTEM_PROMPT = (
     "You are an energy analyst writing for a campus facilities manager. "
@@ -54,7 +54,7 @@ def status() -> dict:
         "reason": (
             "Active"
             if is_available()
-            else "No ECOTWIN_LLM_API_KEY configured. Deterministic narratives in use."
+            else "No VOLTAURA_LLM_API_KEY configured. Deterministic narratives in use."
         ),
     }
 

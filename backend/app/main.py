@@ -1,5 +1,5 @@
 """
-EcoTwin API.
+VOLTAURA API.
 
     uvicorn app.main:app --reload --app-dir backend
 
@@ -28,6 +28,7 @@ from .routers import (
     recommendations,
     reports,
     settings as settings_router,
+    telemetry,
     verification,
 )
 
@@ -36,7 +37,7 @@ logging.basicConfig(
     format="%(asctime)s  %(levelname)-7s %(name)s  %(message)s",
     datefmt="%H:%M:%S",
 )
-logger = logging.getLogger("ecotwin")
+logger = logging.getLogger("voltaura")
 
 
 @asynccontextmanager
@@ -75,12 +76,12 @@ async def lifespan(_app: FastAPI):
 
 
 app = FastAPI(
-    title="EcoTwin API",
+    title="VOLTAURA API",
     version=__version__,
     lifespan=lifespan,
     description=(
         "Sustainable digital twin for building resource waste.\n\n"
-        "EcoTwin detects abnormal energy and water consumption, identifies the "
+        "VOLTAURA detects abnormal energy and water consumption, identifies the "
         "probable cause from measured evidence, recommends an evidence-based "
         "intervention, and then verifies the saving that intervention actually "
         "delivered against an occupancy- and weather-adjusted baseline."
@@ -125,6 +126,7 @@ for router in (
     verification.router,
     reports.router,
     settings_router.router,
+    telemetry.router,
     demo.router,
 ):
     app.include_router(router, prefix="/api")
@@ -133,7 +135,7 @@ for router in (
 @app.get("/", tags=["health"])
 def root() -> dict:
     return {
-        "name": "EcoTwin API",
+        "name": "VOLTAURA API",
         "version": __version__,
         "tagline": "See Waste. Understand Why. Prove the Savings.",
         "docs": "/docs",

@@ -27,8 +27,8 @@ const mono = JetBrains_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "EcoTwin — See Waste. Understand Why. Prove the Savings.",
-    template: "%s · EcoTwin",
+    default: "VOLTAURA — Detect. Understand. Act. Verify.",
+    template: "%s · VOLTAURA",
   },
   description:
     "An AI-powered digital twin that detects abnormal building resource consumption, identifies probable causes, recommends evidence-based interventions, and verifies the savings they actually produce.",
@@ -57,7 +57,7 @@ export default function RootLayout({
         */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var p=JSON.parse(localStorage.getItem('ecotwin.prefs.v1')||'{}');if(p.theme){document.documentElement.setAttribute('data-theme',p.theme);}}catch(e){}})();`,
+            __html: `(function(){try{var p=JSON.parse(localStorage.getItem('voltaura.prefs.v1')||'{}');if(p.theme){document.documentElement.setAttribute('data-theme',p.theme);}}catch(e){}})();`,
           }}
         />
       </head>

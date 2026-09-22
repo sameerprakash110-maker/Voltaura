@@ -183,7 +183,7 @@ def consolidate_events(
     building_id: int,
     resource_type: str,
     merge_gap_hours: int = 3,
-    cluster_gap_hours: int = 72,
+    cluster_gap_hours: int = 168,
     min_intervals: int = 3,
 ) -> list[AnomalyEvent]:
     """
@@ -283,7 +283,7 @@ def detect(
     min_deviation_pct: float = 12.0,
     merge_gap_hours: int = 3,
     min_event_duration_hours: int = 3,
-    cluster_gap_hours: int = 72,
+    cluster_gap_hours: int = 168,
     seed: int = 42,
 ) -> tuple[list[AnomalyEvent], pd.DataFrame]:
     """Run the full detection pass. Returns (events, annotated frame)."""

@@ -1,5 +1,5 @@
 """
-EcoTwin building telemetry simulator.
+VOLTAURA building telemetry simulator.
 
 WHAT THIS IS
 ------------
@@ -150,12 +150,17 @@ class ActiveFault:
         return self.end_ts is None or ts < self.end_ts
 
 
+# Occupancy archetype per RIT block. Architecture is mapped to the "library"
+# curve because studio culture keeps that block occupied late into the evening,
+# which no other academic block does.
 PROFILE_BY_CODE = {
     "ADMIN": "office",
-    "ENGG": "academic",
-    "CSE": "academic",
-    "LIB": "library",
-    "SC": "social",
+    "ARCH": "library",
+    "ESB": "academic",
+    "APEX": "academic",
+    "MPB": "social",
+    "DES": "academic",
+    "LHC": "academic",
 }
 
 

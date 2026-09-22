@@ -1,5 +1,5 @@
 """
-Export the EcoTwin telemetry to CSV.
+Export the VOLTAURA telemetry to CSV.
 
 Useful for inspecting the dataset outside the app, or for feeding it to a
 notebook.
@@ -53,7 +53,7 @@ def write_rows(path: Path, header: list[str], rows: list[list]) -> None:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Export EcoTwin telemetry to CSV")
+    parser = argparse.ArgumentParser(description="Export VOLTAURA telemetry to CSV")
     parser.add_argument("--building", help="building code, e.g. ENGG (default: all)")
     parser.add_argument("--resource", choices=["energy", "water", "both"], default="both")
     parser.add_argument("--out", default=str(ROOT / "data" / "exports"))

@@ -21,6 +21,7 @@ import { useParams, useSearchParams } from "next/navigation";
 import * as React from "react";
 
 import { EvidenceList } from "@/components/cards/domain-cards";
+import { InvestigationPanel } from "@/components/investigation/InvestigationPanel";
 import {
   ActualVsExpectedChart,
   BeforeAfterChart,
@@ -50,6 +51,7 @@ import {
 } from "@/lib/format";
 import type {
   AnomalyDetail,
+  Evidence,
   Intervention,
   Verification,
 } from "@/lib/types";
@@ -57,6 +59,17 @@ import { useApi, useMutation } from "@/lib/use-api";
 import { cn } from "@/lib/utils";
 
 type Stage = "diagnosed" | "recommended" | "intervened" | "verified";
+
+type RecommendationEvidence = Partial<Evidence> & {
+  source?: string;
+  category?: "supporting" | "contradiction" | "unknown" | string;
+  hypothesis?: string;
+  status?: string;
+  description?: string;
+  measured_value?: unknown;
+  reference?: unknown;
+  baseline?: unknown;
+};
 
 export default function AnomalyDetailPage() {
   const params = useParams<{ id: string }>();
@@ -73,25 +86,21 @@ export default function AnomalyDetailPage() {
   const [verification, setVerification] = React.useState<Verification | null>(null);
 
   // Pick up an intervention/verification that already exists for this anomaly.
-  const existing = useApi<Intervention[]>("/api/interventions");
+  const existing = useApi<Intervention | null>(
+    Number.isFinite(id) ? `/api/anomalies/${id}/intervention` : null,
+    [id],
+  );
   React.useEffect(() => {
-    if (!data?.recommendation || !existing.data) return;
-    const match = existing.data.find(
-      (i) => i.recommendation_id === data.recommendation?.id,
-    );
-    if (match) setIntervention(match);
-  }, [data?.recommendation, existing.data]);
+    if (existing.data !== null) setIntervention(existing.data);
+  }, [existing.data]);
 
   const verificationQuery = useApi<Verification[]>(
-    intervention ? `/api/verification?latest_only=true` : null,
+    intervention ? `/api/verification?intervention_id=${intervention.id}&latest_only=true` : null,
     [intervention?.id],
   );
   React.useEffect(() => {
     if (!intervention || !verificationQuery.data) return;
-    const match = verificationQuery.data.find(
-      (v) => v.intervention_id === intervention.id,
-    );
-    if (match) setVerification(match);
+    setVerification(verificationQuery.data[0] ?? null);
   }, [intervention, verificationQuery.data]);
 
   const applyMutation = useMutation(async (recommendationId: number) => {
@@ -391,6 +400,9 @@ export default function AnomalyDetailPage() {
         </Panel>
       </section>
 
+      {/* ---- deterministic investigation ---- */}
+      <InvestigationPanel anomalyId={anomaly.id} />
+
       {/* ---- recommendation ---- */}
       {recommendation ? (
         <Panel id="recommendation" className="scroll-mt-24">
@@ -414,8 +426,8 @@ export default function AnomalyDetailPage() {
           />
           <div className="px-5 pb-5">
             <div className="grid gap-4 lg:grid-cols-[1.3fr_1fr]">
-              <div>
-                <div className="eyebrow mb-1.5">Reason</div>
+                <div>
+                  <div className="eyebrow mb-1.5">Reason</div>
                 <p className="text-[12.5px] leading-relaxed text-ink-soft">
                   {recommendation.reason}
                 </p>
@@ -425,10 +437,12 @@ export default function AnomalyDetailPage() {
                   {recommendation.implementation}
                 </p>
 
-                <p className="mt-3 text-[11px] text-ink-muted">
-                  {recommendation.payback_note}
-                </p>
-              </div>
+                  <p className="mt-3 text-[11px] text-ink-muted">
+                    {recommendation.payback_note}
+                  </p>
+
+                  <RecommendationEvidenceBridge evidence={recommendation.evidence} />
+                </div>
 
               <div>
                 <div className="eyebrow mb-2">Expected saving</div>
@@ -477,11 +491,18 @@ export default function AnomalyDetailPage() {
                     <Wrench /> Apply Intervention
                   </Button>
                 ) : (
-                  <div className="mt-4 flex items-center gap-2 rounded-lg border border-mint/22 bg-mint/[0.06] px-3.5 py-3">
-                    <CheckCircle2 className="size-4 text-mint" />
-                    <span className="text-[12px] text-ink-soft">
-                      Applied as intervention #{intervention.id}
-                    </span>
+                  <div className="mt-4 space-y-2">
+                    <div className="flex items-center gap-2 rounded-lg border border-mint/22 bg-mint/[0.06] px-3.5 py-3">
+                      <CheckCircle2 className="size-4 text-mint" />
+                      <span className="text-[12px] text-ink-soft">
+                        Applied as intervention #{intervention.id}
+                      </span>
+                    </div>
+                    <Button variant="secondary" size="sm" className="w-full" asChild>
+                      <Link href={`/interventions#i${intervention.id}`}>
+                        View intervention lifecycle <ArrowRight />
+                      </Link>
+                    </Button>
                   </div>
                 )}
                 {applyMutation.error ? (
@@ -535,10 +556,14 @@ export default function AnomalyDetailPage() {
           />
 
           <div className="px-5 pb-5">
-            {verification?.status === "VERIFIED" ? (
-              <VerifiedResult verification={verification} />
-            ) : (
-              <div className="grid gap-4 lg:grid-cols-[1fr_1.1fr]">
+            <InterventionLifecycle intervention={intervention} />
+
+            {verification ? (
+              <VerificationResultSummary verification={verification} />
+            ) : null}
+
+            {verification?.status !== "VERIFIED" ? (
+              <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_1.1fr]">
                 <div>
                   <div className="mb-1.5 flex items-center justify-between text-[11px]">
                     <span className="flex items-center gap-1.5 text-ink-muted">
@@ -581,7 +606,12 @@ export default function AnomalyDetailPage() {
                       "Collecting telemetry and verifying..."
                     ) : (
                       <>
-                        <BadgeCheck /> Collect 14 days and verify
+                        <BadgeCheck />
+                        {verification?.status === "INSUFFICIENT_DATA"
+                          ? "Collect more telemetry and verify"
+                          : verification
+                            ? "Run monitoring and verify again"
+                            : "Collect 14 days and verify"}
                       </>
                     )}
                   </Button>
@@ -590,18 +620,9 @@ export default function AnomalyDetailPage() {
                   ) : null}
                 </div>
               </div>
-            )}
-
-            {verification && verification.status !== "VERIFIED" && verification.status !== "INSUFFICIENT_DATA" ? (
-              <div className="mt-4 rounded-card border border-critical/20 bg-critical/[0.05] p-4">
-                <div className="text-[12px] font-medium text-ink">
-                  Verification returned {verification.status.replace("_", " ")}
-                </div>
-                <p className="mt-1.5 text-[11.5px] leading-relaxed text-ink-soft">
-                  {verification.explanation}
-                </p>
-              </div>
             ) : null}
+
+            {verification ? <VerificationInterpretation verification={verification} /> : null}
           </div>
         </Panel>
       ) : null}
@@ -620,6 +641,216 @@ export default function AnomalyDetailPage() {
           </Button>
         ) : null}
       </div>
+    </div>
+  );
+}
+
+function displayEvidenceValue(value: unknown): string {
+  if (value === null || value === undefined) return "—";
+  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return String(value);
+  }
+}
+
+function RecommendationEvidenceBridge({
+  evidence,
+}: {
+  evidence: Evidence[];
+}) {
+  const items = evidence as RecommendationEvidence[];
+  const supporting = items.filter((item) => item.category !== "contradiction" && item.category !== "unknown");
+  const contradictions = items.filter((item) => item.category === "contradiction");
+  const unknowns = items.filter((item) => item.category === "unknown");
+
+  if (!items.length) return null;
+
+  const renderItem = (item: RecommendationEvidence, index: number) => (
+    <div
+      key={`${item.label ?? item.description ?? "evidence"}-${index}`}
+      className="rounded-lg border border-[rgb(var(--line)/0.08)] bg-surface/45 px-3 py-2.5"
+    >
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <span className="text-[11px] font-medium text-ink">
+          {item.label ?? item.description ?? "Investigation evidence"}
+        </span>
+        {item.measured_value !== undefined || item.value !== undefined ? (
+          <span className="num text-[10px] text-ink-soft">
+            {displayEvidenceValue(item.measured_value ?? item.value)}
+          </span>
+        ) : null}
+      </div>
+      {item.description || item.detail ? (
+        <p className="mt-1 text-[10.5px] leading-relaxed text-ink-muted">
+          {item.description ?? item.detail}
+        </p>
+      ) : null}
+      {item.hypothesis ? (
+        <div className="mt-1 text-[9.5px] text-ink-muted">
+          Hypothesis: <span className="text-ink-soft">{item.hypothesis}</span>
+        </div>
+      ) : null}
+    </div>
+  );
+
+  return (
+    <div className="mt-5 rounded-card border border-aqua/18 bg-aqua/[0.025] p-4">
+      <div className="eyebrow mb-1 text-aqua">Evidence informing this recommendation</div>
+      <p className="mb-3 text-[11px] leading-relaxed text-ink-muted">
+        The recommendation keeps the existing root-cause decision and carries
+        forward the measured investigation evidence below.
+      </p>
+      <div className="space-y-2">{supporting.map(renderItem)}</div>
+      {contradictions.length ? (
+        <div className="mt-3 rounded-lg border border-critical/18 bg-critical/[0.04] p-2.5">
+          <div className="eyebrow mb-2 text-critical">Contradictions retained</div>
+          <div className="space-y-2">{contradictions.map(renderItem)}</div>
+        </div>
+      ) : null}
+      {unknowns.length ? (
+        <div className="mt-3 rounded-lg border border-medium/18 bg-medium/[0.04] p-2.5">
+          <div className="eyebrow mb-2 text-medium">Unknowns retained</div>
+          <div className="space-y-2">{unknowns.map(renderItem)}</div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+const INTERVENTION_LIFECYCLE: Array<Intervention["status"]> = [
+  "PLANNED",
+  "ACTIVE",
+  "MONITORING",
+  "COMPLETED",
+  "VERIFIED",
+];
+
+function InterventionLifecycle({ intervention }: { intervention: Intervention }) {
+  const current = INTERVENTION_LIFECYCLE.indexOf(intervention.status);
+
+  return (
+    <div className="mb-4 rounded-card border border-[rgb(var(--line)/0.09)] bg-surface/40 p-4">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <div className="eyebrow">Intervention lifecycle</div>
+          <div className="mt-1 text-[12px] text-ink-soft">
+            Intervention #{intervention.id} · {intervention.status}
+          </div>
+        </div>
+        <Link
+          href={`/interventions#i${intervention.id}`}
+          className="text-[11px] text-aqua hover:text-ink-soft"
+        >
+          Open intervention <ArrowRight className="ml-1 inline size-3" />
+        </Link>
+      </div>
+      <div className="flex flex-wrap items-center gap-1.5">
+        {INTERVENTION_LIFECYCLE.map((status, index) => (
+          <React.Fragment key={status}>
+            <Badge
+              tone={
+                index < current
+                  ? "mint"
+                  : index === current
+                    ? status === "VERIFIED" ? "mint" : "aqua"
+                    : "neutral"
+              }
+              dot={index === current}
+            >
+              {status}
+            </Badge>
+            {index < INTERVENTION_LIFECYCLE.length - 1 ? (
+              <span className="h-px w-3 bg-[rgb(var(--line)/0.14)]" />
+            ) : null}
+          </React.Fragment>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function verificationTone(status: Verification["status"]): "mint" | "aqua" | "critical" | "medium" {
+  if (status === "VERIFIED") return "mint";
+  if (status === "INSUFFICIENT_DATA") return "aqua";
+  if (status === "INCONCLUSIVE") return "medium";
+  return "critical";
+}
+
+function VerificationResultSummary({ verification }: { verification: Verification }) {
+  return (
+    <div className="mb-4 rounded-card border border-[rgb(var(--line)/0.09)] bg-surface/40 p-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <div className="eyebrow">Latest verification result</div>
+          <div className="mt-1 text-[12px] text-ink-soft">
+            Measured against the adjusted baseline; no frontend recalculation is applied.
+          </div>
+        </div>
+        <Badge tone={verificationTone(verification.status)} dot>
+          {verification.status.replace(/_/g, " ")}
+        </Badge>
+      </div>
+      <div className="mt-3 grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-[rgb(var(--line)/0.08)] bg-[rgb(var(--line)/0.06)] lg:grid-cols-5">
+        <VerificationMetric label="Baseline" value={num(verification.baseline_value)} unit={verification.unit} />
+        <VerificationMetric label="Adjusted baseline" value={num(verification.adjusted_baseline_value)} unit={verification.unit} />
+        <VerificationMetric label="Post-intervention" value={num(verification.post_value)} unit={verification.unit} />
+        <VerificationMetric label="Saving" value={pct(verification.saving_pct)} unit={`${compact(Math.abs(verification.absolute_saving), 1)} ${verification.unit}/wk`} />
+        <VerificationMetric label="p-value" value={fmtP(verification.p_value)} unit={`threshold ${pct(verification.threshold_pct, 0)}`} />
+      </div>
+      <div className="mt-3 grid gap-2 text-[11px] text-ink-muted sm:grid-cols-2">
+        <span>Financial: <strong className="text-ink-soft">{compact(verification.financial_saving_per_year, 1)} / year</strong></span>
+        <span>Carbon: <strong className="text-ink-soft">{compact(verification.co2_reduction_per_year, 1)} kg / year</strong></span>
+      </div>
+    </div>
+  );
+}
+
+function VerificationMetric({
+  label,
+  value,
+  unit,
+}: {
+  label: string;
+  value: string;
+  unit: string;
+}) {
+  return (
+    <div className="bg-surface px-3 py-2.5">
+      <div className="eyebrow mb-1">{label}</div>
+      <div className="num text-[13px] font-semibold text-ink">{value}</div>
+      <div className="mt-0.5 text-[9px] text-ink-muted">{unit}</div>
+    </div>
+  );
+}
+
+function VerificationInterpretation({ verification }: { verification: Verification }) {
+  const message = verification.status === "INSUFFICIENT_DATA"
+    ? "More post-intervention telemetry is required. This is not a failed intervention."
+    : verification.status === "INCONCLUSIVE"
+      ? "A measured reduction exists, but it did not satisfy the statistical significance requirement."
+      : verification.status === "NOT_VERIFIED"
+        ? "The measured result did not meet the verification threshold."
+        : "The measured saving cleared both the threshold and significance gates.";
+
+  return (
+    <div className={cn(
+      "rounded-card border p-4",
+      verification.status === "VERIFIED"
+        ? "border-mint/20 bg-mint/[0.04]"
+        : verification.status === "INSUFFICIENT_DATA"
+          ? "border-aqua/20 bg-aqua/[0.04]"
+          : verification.status === "INCONCLUSIVE"
+            ? "border-medium/20 bg-medium/[0.04]"
+            : "border-critical/20 bg-critical/[0.04]",
+    )}>
+      <div className="text-[12px] font-medium text-ink">{message}</div>
+      <p className="mt-1.5 text-[11.5px] leading-relaxed text-ink-soft">
+        {verification.explanation}
+      </p>
     </div>
   );
 }

@@ -3,7 +3,7 @@ Database engine / session plumbing.
 
 The layer is deliberately dialect-agnostic: the only SQLite-specific bit is the
 `connect_args` / PRAGMA block, which is skipped for any other URL.  Pointing
-ECOTWIN_DATABASE_URL at `postgresql+psycopg://...` is the whole migration.
+VOLTAURA_DATABASE_URL at `postgresql+psycopg://...` is the whole migration.
 """
 from __future__ import annotations
 
@@ -68,7 +68,37 @@ def session_scope() -> Iterator[Session]:
 
 def init_db(drop: bool = False) -> None:
     from . import models  # noqa: F401  (register mappers)
+    from sqlalchemy import inspect, text
 
     if drop:
         Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
+
+    # Ensure backward-compatible column migration for existing tables
+    try:
+        with engine.begin() as conn:
+            inspector = inspect(conn)
+            tables = inspector.get_table_names()
+
+            # 1. water_readings extra telemetry columns
+            if "water_readings" in tables:
+                existing_cols = {c["name"] for c in inspector.get_columns("water_readings")}
+                if "source" not in existing_cols:
+                    conn.execute(text("ALTER TABLE water_readings ADD COLUMN source VARCHAR(32) DEFAULT 'simulator'"))
+                if "water_level_pct" not in existing_cols:
+                    conn.execute(text("ALTER TABLE water_readings ADD COLUMN water_level_pct FLOAT"))
+                if "tds_ppm" not in existing_cols:
+                    conn.execute(text("ALTER TABLE water_readings ADD COLUMN tds_ppm INTEGER"))
+                if "turbidity_ntu" not in existing_cols:
+                    conn.execute(text("ALTER TABLE water_readings ADD COLUMN turbidity_ntu FLOAT"))
+
+            # 2. raw_water_telemetry composite index
+            if "raw_water_telemetry" in tables:
+                existing_indexes = {idx["name"] for idx in inspector.get_indexes("raw_water_telemetry")}
+                if "ix_raw_water_telemetry_bldg_dev_rcvd" not in existing_indexes:
+                    conn.execute(text(
+                        "CREATE INDEX IF NOT EXISTS ix_raw_water_telemetry_bldg_dev_rcvd "
+                        "ON raw_water_telemetry (building_id, device_id, received_at)"
+                    ))
+    except Exception:
+        pass

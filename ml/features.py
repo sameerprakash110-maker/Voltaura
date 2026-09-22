@@ -1,5 +1,5 @@
 """
-Shared feature engineering for the EcoTwin ML pipeline.
+Shared feature engineering for the VOLTAURA ML pipeline.
 
 A deliberate distinction runs through this module:
 

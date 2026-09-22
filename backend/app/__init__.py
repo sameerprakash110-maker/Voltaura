@@ -1,4 +1,4 @@
-"""EcoTwin backend application package."""
+"""VOLTAURA backend application package."""
 from __future__ import annotations
 
 import sys

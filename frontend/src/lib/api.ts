@@ -77,7 +77,7 @@ async function request<T>(
     throw new ApiError(
       aborted
         ? "The request timed out. The analysis may still be running on the server."
-        : "Cannot reach the EcoTwin API.",
+        : "Cannot reach the VOLTAURA API.",
       {
         status: 0,
         offline: true,
@@ -118,14 +118,50 @@ async function request<T>(
   return body as T;
 }
 
+const getCache = new Map<string, { expires: number; value: unknown }>();
+const getInflight = new Map<string, Promise<unknown>>();
+const GET_CACHE_MS = 15_000;
+
+function invalidateGetCache() {
+  getCache.clear();
+}
+
+async function cachedGet<T>(path: string): Promise<T> {
+  const now = Date.now();
+  const cached = getCache.get(path);
+  if (cached && cached.expires > now) return cached.value as T;
+  const pending = getInflight.get(path);
+  if (pending) return pending as Promise<T>;
+  const requestPromise = request<T>(path).then((value) => {
+    getCache.set(path, { expires: Date.now() + GET_CACHE_MS, value });
+    getInflight.delete(path);
+    return value;
+  }).catch((error) => {
+    getInflight.delete(path);
+    throw error;
+  });
+  getInflight.set(path, requestPromise);
+  return requestPromise;
+}
+
 export const api = {
   get: <T>(path: string) => request<T>(path),
+  getCached: <T>(path: string) => cachedGet<T>(path),
   post: <T>(path: string, body?: unknown) =>
-    request<T>(path, { method: "POST", body: JSON.stringify(body ?? {}) }),
+    request<T>(path, { method: "POST", body: JSON.stringify(body ?? {}) }).then((value) => {
+      invalidateGetCache();
+      return value;
+    }),
   put: <T>(path: string, body?: unknown) =>
-    request<T>(path, { method: "PUT", body: JSON.stringify(body ?? {}) }),
+    request<T>(path, { method: "PUT", body: JSON.stringify(body ?? {}) }).then((value) => {
+      invalidateGetCache();
+      return value;
+    }),
   patch: <T>(path: string, body?: unknown) =>
-    request<T>(path, { method: "PATCH", body: JSON.stringify(body ?? {}) }),
+    request<T>(path, { method: "PATCH", body: JSON.stringify(body ?? {}) }).then((value) => {
+      invalidateGetCache();
+      return value;
+    }),
 };
 
 /** Absolute URL for links the browser should navigate to, such as downloads. */

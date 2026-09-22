@@ -55,7 +55,7 @@ def export_report(
             io.StringIO(payload),
             media_type="application/json",
             headers={
-                "Content-Disposition": f'attachment; filename="ecotwin-report-{stamp}.json"'
+                "Content-Disposition": f'attachment; filename="voltaura-report-{stamp}.json"'
             },
         )
 
@@ -64,7 +64,7 @@ def export_report(
     totals = data["totals"]
     currency = data["economics"]["currency"]
 
-    writer.writerow(["EcoTwin Sustainability Report"])
+    writer.writerow(["VOLTAURA Sustainability Report"])
     writer.writerow(["Generated", data["generated_at"].strftime("%Y-%m-%d %H:%M")])
     writer.writerow([
         "Period",
@@ -148,5 +148,5 @@ def export_report(
     return StreamingResponse(
         buffer,
         media_type="text/csv",
-        headers={"Content-Disposition": f'attachment; filename="ecotwin-report-{stamp}.csv"'},
+        headers={"Content-Disposition": f'attachment; filename="voltaura-report-{stamp}.csv"'},
     )

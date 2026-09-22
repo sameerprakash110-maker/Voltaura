@@ -19,7 +19,7 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import * as React from "react";
 
-import { EcoTwinMark } from "@/components/brand/mark";
+import { VOLTAURAMark } from "@/components/brand/mark";
 import { StaticPipeline } from "@/components/layout/pipeline-rail";
 import { Badge, Button } from "@/components/ui/primitives";
 import { useApi } from "@/lib/use-api";
@@ -39,7 +39,7 @@ const CampusScene = dynamic(
     loading: () => (
       <div className="flex h-full w-full items-center justify-center">
         <div className="flex flex-col items-center gap-3">
-          <EcoTwinMark className="size-10 animate-pulse" />
+          <VOLTAURAMark className="size-10 animate-pulse" />
           <span className="text-[11px] text-ink-muted">Loading digital twin</span>
         </div>
       </div>
@@ -65,7 +65,7 @@ export default function LandingPage() {
         <ProblemSection />
         <HowItWorks />
         <AiCapabilities />
-        <TwinSection />
+        <TwinSection buildingCount={buildings?.length ?? 7} />
         <VerifiedSavings report={report} />
         <WorkflowSection />
         <DemoStats health={health} report={report} />
@@ -82,9 +82,9 @@ function LandingNav() {
     <header className="sticky top-0 z-40 border-b border-[rgb(var(--line)/0.08)] bg-canvas/75 backdrop-blur-xl">
       <div className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between px-5 sm:px-8">
         <Link href="/" className="flex items-center gap-2.5">
-          <EcoTwinMark className="size-7" />
+          <VOLTAURAMark className="size-7" />
           <span className="font-display text-[17px] font-semibold tracking-tight text-ink">
-            EcoTwin
+            VOLTAURA
           </span>
         </Link>
         <nav className="hidden items-center gap-7 md:flex">
@@ -147,7 +147,7 @@ function Hero({
           </h1>
 
           <p className="mt-6 max-w-xl text-[15px] leading-relaxed text-ink-soft text-pretty">
-            EcoTwin is an AI-powered digital twin that detects abnormal building
+            VOLTAURA is an AI-powered digital twin that detects abnormal building
             resource consumption, identifies probable causes, recommends
             evidence-based interventions, and verifies the savings they actually
             produce.
@@ -212,7 +212,7 @@ function Hero({
               <div>
                 <div className="eyebrow mb-1">Live campus twin</div>
                 <div className="text-[13px] font-medium text-ink">
-                  5 buildings under continuous baseline
+                  {twin.length} blocks under continuous baseline
                 </div>
               </div>
               <div className="flex gap-3">
@@ -395,9 +395,9 @@ function HowItWorks() {
     <section id="how" className="border-t border-[rgb(var(--line)/0.08)] py-20">
       <div className="mx-auto w-full max-w-7xl px-5 sm:px-8">
         <SectionHead
-          eyebrow="How EcoTwin works"
+          eyebrow="How VOLTAURA works"
           title="One closed loop, from raw meter reading to proven saving"
-          description="Most tools stop after the chart. EcoTwin carries a single finding all the way through to a number you can put in a sustainability report and defend."
+          description="Most tools stop after the chart. VOLTAURA carries a single finding all the way through to a number you can put in a sustainability report and defend."
         />
         <div className="mt-12 grid gap-px overflow-hidden rounded-panel border border-[rgb(var(--line)/0.1)] bg-[rgb(var(--line)/0.08)] sm:grid-cols-2 lg:grid-cols-3">
           {steps.map((step) => {
@@ -465,7 +465,7 @@ function AiCapabilities() {
         <SectionHead
           eyebrow="AI capabilities"
           title="Models that can be interrogated, not just trusted"
-          description="Every number in EcoTwin traces back to a stored reading or a calculation you can open up. The optional LLM layer only ever rewrites a finished finding into plainer prose; it never decides a cause, a confidence or a number."
+          description="Every number in VOLTAURA traces back to a stored reading or a calculation you can open up. The optional LLM layer only ever rewrites a finished finding into plainer prose; it never decides a cause, a confidence or a number."
         />
         <div className="mt-12 grid gap-4 lg:grid-cols-2">
           {items.map((item) => (
@@ -492,7 +492,7 @@ function AiCapabilities() {
 }
 
 // --------------------------------------------------------------------------
-function TwinSection() {
+function TwinSection({ buildingCount }: { buildingCount: number }) {
   return (
     <section id="twin" className="border-t border-[rgb(var(--line)/0.08)] py-20">
       <div className="mx-auto w-full max-w-7xl px-5 sm:px-8">
@@ -530,7 +530,7 @@ function TwinSection() {
           <div className="panel overflow-hidden p-0">
             <div className="grid grid-cols-2 gap-px bg-[rgb(var(--line)/0.08)] sm:grid-cols-4">
               {[
-                { icon: Boxes, label: "Buildings", value: "5" },
+                { icon: Boxes, label: "Blocks", value: String(buildingCount) },
                 { icon: Gauge, label: "Channels", value: "9" },
                 { icon: Activity, label: "Resolution", value: "1h" },
                 { icon: Droplets, label: "Resources", value: "2" },
@@ -593,7 +593,7 @@ function VerifiedSavings({ report }: { report: ReportSummary | null }) {
         <SectionHead
           eyebrow="Verified savings"
           title="The difference between an estimate and a measurement"
-          description="A recommendation predicts a saving. Verification measures the one the building actually delivered, against a baseline adjusted for the weather and occupancy of the period that followed. EcoTwin is allowed to report that a measure did not work."
+          description="A recommendation predicts a saving. Verification measures the one the building actually delivered, against a baseline adjusted for the weather and occupancy of the period that followed. VOLTAURA is allowed to report that a measure did not work."
         />
 
         <div className="mt-12 grid gap-4 lg:grid-cols-[1.25fr_1fr]">
@@ -713,7 +713,7 @@ function DemoStats({
       value: health
         ? num(health.energy_readings + health.water_readings)
         : "21,600",
-      caption: "Across 5 buildings and 2 resources",
+      caption: `Across ${health?.buildings ?? 7} blocks and 2 resources`,
     },
     {
       label: "Anomaly events detected",
@@ -786,14 +786,14 @@ function FinalCta() {
   return (
     <section className="border-t border-[rgb(var(--line)/0.08)] py-24">
       <div className="mx-auto w-full max-w-4xl px-5 text-center sm:px-8">
-        <EcoTwinMark className="mx-auto size-12" />
+        <VOLTAURAMark className="mx-auto size-12" />
         <h2 className="mt-7 font-display text-[2.1rem] font-semibold leading-tight tracking-[-0.02em] text-ink sm:text-[2.6rem] text-balance">
           Stop reporting consumption.
           <br />
           Start proving reduction.
         </h2>
         <p className="mx-auto mt-5 max-w-xl text-[15px] leading-relaxed text-ink-soft text-pretty">
-          Open the command centre to see five buildings under continuous
+          Open the command centre to see seven RIT blocks under continuous
           baseline, three open anomalies with diagnosed causes, and two
           interventions whose savings have already been measured.
         </p>
@@ -817,9 +817,9 @@ function LandingFooter() {
     <footer className="border-t border-[rgb(var(--line)/0.08)] py-10">
       <div className="mx-auto flex w-full max-w-7xl flex-col items-center justify-between gap-4 px-5 sm:flex-row sm:px-8">
         <div className="flex items-center gap-2.5">
-          <EcoTwinMark className="size-5" />
+          <VOLTAURAMark className="size-5" />
           <span className="text-[12px] text-ink-muted">
-            EcoTwin &middot; See Waste. Understand Why. Prove the Savings.
+            VOLTAURA &middot; See Waste. Understand Why. Prove the Savings.
           </span>
         </div>
         <div className="flex items-center gap-5 text-[12px] text-ink-muted">

@@ -56,14 +56,21 @@ WATER_COLS = (
 # --------------------------------------------------------------------------
 def _frame(db: Session, columns, model, start: datetime, end: datetime,
            building_id: int | None = None) -> pd.DataFrame:
+    cache = db.info.setdefault("analytics_frames", {})
+    cache_key = (model, tuple(c.key for c in columns), start, end, building_id)
+    if cache_key in cache:
+        return cache[cache_key]
     query = select(*columns).where(model.ts >= start, model.ts <= end)
     if building_id is not None:
         query = query.where(model.building_id == building_id)
     rows = db.execute(query.order_by(model.ts)).all()
     if not rows:
-        return pd.DataFrame(columns=[c.key for c in columns])
+        df = pd.DataFrame(columns=[c.key for c in columns])
+        cache[cache_key] = df
+        return df
     df = pd.DataFrame(rows, columns=[c.key for c in columns])
     df["ts"] = pd.to_datetime(df["ts"])
+    cache[cache_key] = df
     return df
 
 
@@ -285,17 +292,25 @@ def campus_series(db: Session, days: int, resource: str = "ALL") -> list[dict[st
 def building_series(
     db: Session, building: Building, resource: str, days: int,
     anomalous_timestamps: set | None = None,
+    frame: pd.DataFrame | None = None,
 ) -> list[dict[str, Any]]:
     """One building's telemetry, with anomalous intervals marked."""
     start, end, _, _ = window(db, days)
     interval = pick_interval(days)
     anomalous_timestamps = anomalous_timestamps or set()
 
-    if resource == "ENERGY":
+    if frame is not None:
+        df = frame[(frame["ts"] >= start) & (frame["ts"] <= end)].copy()
+    elif resource == "ENERGY":
         df = energy_frame(db, start, end, building.id)
         value, expected = "energy_kwh", "expected_kwh"
     else:
         df = water_frame(db, start, end, building.id)
+        value, expected = "water_liters", "expected_liters"
+
+    if resource == "ENERGY":
+        value, expected = "energy_kwh", "expected_kwh"
+    else:
         value, expected = "water_liters", "expected_liters"
 
     if df.empty:
@@ -369,6 +384,7 @@ def building_series(
 # --------------------------------------------------------------------------
 def build_kpis(db: Session, days: int) -> list[dict[str, Any]]:
     start, end, prev_start, prev_end = window(db, days)
+    n_buildings = db.execute(select(func.count(Building.id))).scalar() or 0
     econ = settings_service.economics(db)
     symbol = econ["currency_symbol"]
 
@@ -430,14 +446,14 @@ def build_kpis(db: Session, days: int) -> list[dict[str, Any]]:
             "value": round(float(e_now), 1), "unit": "kWh",
             "change_pct": e_change, "previous_value": round(float(e_prev), 1),
             "direction": direction(e_change), "good_direction": "down",
-            "caption": f"Metered across 5 buildings over {days} days", "measured": True,
+            "caption": f"Metered across {n_buildings} blocks over {days} days", "measured": True,
         },
         {
             "key": "water", "label": "Total Water Consumption",
             "value": round(float(w_now) / 1000.0, 1), "unit": "kL",
             "change_pct": w_change, "previous_value": round(float(w_prev) / 1000.0, 1),
             "direction": direction(w_change), "good_direction": "down",
-            "caption": f"Metered across 5 buildings over {days} days", "measured": True,
+            "caption": f"Metered across {n_buildings} blocks over {days} days", "measured": True,
         },
         {
             "key": "anomalies", "label": "Active Anomalies",
@@ -476,6 +492,7 @@ def build_kpis(db: Session, days: int) -> list[dict[str, Any]]:
 # Pipeline status (the product loop, as data)
 # --------------------------------------------------------------------------
 def pipeline_status(db: Session) -> dict[str, Any]:
+    buildings = db.execute(select(func.count(Building.id))).scalar() or 0
     readings = (db.execute(select(func.count(EnergyReading.id))).scalar() or 0) + (
         db.execute(select(func.count(WaterReading.id))).scalar() or 0
     )
@@ -502,8 +519,8 @@ def pipeline_status(db: Session) -> dict[str, Any]:
         "stages": [
             {"key": "data", "label": "Data", "value": readings,
              "caption": "hourly intervals ingested"},
-            {"key": "monitor", "label": "Monitor", "value": 5,
-             "caption": "buildings under continuous baseline"},
+            {"key": "monitor", "label": "Monitor", "value": buildings,
+             "caption": "blocks under continuous baseline"},
             {"key": "detect", "label": "Detect", "value": anomalies,
              "caption": "anomaly events found"},
             {"key": "diagnose", "label": "Diagnose", "value": diagnosed,

@@ -1,4 +1,4 @@
-"""Pydantic response and request models for the EcoTwin API."""
+"""Pydantic response and request models for the VOLTAURA API."""
 from __future__ import annotations
 
 from datetime import datetime
@@ -396,6 +396,157 @@ class DemoStateResponse(BaseModel):
     data_start: datetime | None = None
     data_end: datetime | None = None
     seeded_at: datetime | None = None
+
+
+# --------------------------------------------------------------------------
+# IoT Telemetry Ingestion (Step 8)
+# --------------------------------------------------------------------------
+class TelemetryDiagnosticsSchema(BaseModel):
+    """Optional low-level hardware diagnostics block."""
+
+    pulse_count: int | None = Field(None, ge=0)
+    distance_raw_cm: float | None = Field(None, ge=0.0)
+    tds_voltage_mv: float | None = Field(None, ge=0.0)
+    turbidity_voltage_mv: float | None = Field(None, ge=0.0)
+    rssi_dbm: int | None = Field(None, ge=-130, le=0)
+    uptime_seconds: int | None = Field(None, ge=0)
+    free_heap_bytes: int | None = Field(None, ge=0)
+
+
+class TelemetryIngestionRequest(BaseModel):
+    """
+    Canonical telemetry payload from physical edge nodes (docs/TELEMETRY_CONTRACT.md).
+    Strictly preserves null vs zero semantics across all fields.
+    """
+
+    schema_version: Literal["1.0"] = Field(
+        ..., description="Frozen contract schema version, must be '1.0'"
+    )
+    device_id: str = Field(
+        ..., min_length=1, max_length=64, description="Canonical device identifier"
+    )
+    building_id: int = Field(..., description="Target building database ID")
+    source: Literal["esp32"] = Field(
+        ..., description="Telemetry source identifier, must be 'esp32' for hardware ingestion"
+    )
+    interval_seconds: int = Field(
+        ..., ge=5, le=60, description="Reporting interval in seconds (5-60s)"
+    )
+    timestamp: datetime | None = Field(
+        None, description="Device ISO 8601 timestamp (null if NTP not yet active)"
+    )
+
+    # Water telemetry
+    water_level_pct: float | None = Field(
+        None, ge=0.0, le=100.0, description="Effective water height percentage (0.0-100.0%)"
+    )
+    water_level_cm: float | None = Field(
+        None, ge=0.0, description="Effective water height in centimeters"
+    )
+    flow_rate_lpm: float | None = Field(
+        None, ge=0.0, description="Average flow rate over interval in L/min"
+    )
+    volume_liters: float | None = Field(
+        None, ge=0.0, description="Cumulative volume passed during interval in Liters"
+    )
+
+    # Water quality
+    tds_ppm: int | None = Field(
+        None, ge=0, description="Total dissolved solids in ppm"
+    )
+    turbidity_ntu: float | None = Field(
+        None, ge=0.0, description="Water turbidity in Nephelometric Turbidity Units"
+    )
+
+    # Errors & Diagnostics
+    sensor_errors: list[str] = Field(
+        default_factory=list, description="List of active hardware error codes"
+    )
+    diagnostics: TelemetryDiagnosticsSchema | None = Field(
+        None, description="Optional hardware health and raw sensor diagnostics"
+    )
+
+
+class TelemetryIngestionResponse(BaseModel):
+    """Structured response on successful telemetry persistence."""
+
+    success: bool = True
+    message: str = "Telemetry accepted"
+    id: int
+    received_at: datetime
+
+
+class RawTelemetryItem(ORMModel):
+    """Public schema for querying raw telemetry records."""
+
+    id: int
+    device_id: str
+    building_id: int
+    schema_version: str
+    source: str
+    device_timestamp: datetime | None = None
+    received_at: datetime
+    interval_seconds: int
+    water_level_pct: float | None = None
+    water_level_cm: float | None = None
+    flow_rate_lpm: float | None = None
+    volume_liters: float | None = None
+    tds_ppm: int | None = None
+    turbidity_ntu: float | None = None
+    pulse_count: int | None = None
+    distance_raw_cm: float | None = None
+    tds_voltage_mv: float | None = None
+    turbidity_voltage_mv: float | None = None
+    rssi_dbm: int | None = None
+    uptime_seconds: int | None = None
+    free_heap_bytes: int | None = None
+    sensor_errors: list[str] = Field(default_factory=list)
+
+
+class AggregationResult(BaseModel):
+    """Detailed summary of an hourly aggregation execution."""
+
+    building_id: int
+    device_id: str
+    hour_start: datetime
+    hour_end: datetime
+    sample_count: int
+    expected_sample_count: int
+    coverage_pct: float
+    status: str
+    aggregated: bool
+    action: str | None = None
+    water_liters: float | None = None
+    flow_lph: float | None = None
+    water_level_pct: float | None = None
+    tds_ppm: int | None = None
+    turbidity_ntu: float | None = None
+    reading_id: int | None = None
+    message: str | None = None
+
+
+class AggregationTriggerRequest(BaseModel):
+    """Request payload to manually trigger hourly telemetry aggregation."""
+
+    building_id: int
+    device_id: str
+    hour_start: datetime | None = None
+    allow_partial: bool = False
+    min_coverage_pct: float = 50.0
+
+
+class AggregatedReadingItem(ORMModel):
+    """Public representation of an hourly water reading including telemetry provenance."""
+
+    id: int
+    building_id: int
+    ts: datetime
+    water_liters: float
+    flow_lph: float
+    water_level_pct: float | None = None
+    tds_ppm: int | None = None
+    turbidity_ntu: float | None = None
+    source: str = "simulator"
 
 
 BuildingDetail.model_rebuild()

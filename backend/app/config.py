@@ -1,5 +1,5 @@
 """
-Central configuration for EcoTwin.
+Central configuration for VOLTAURA.
 
 Every tariff / emission-factor / threshold used anywhere in the savings maths
 lives here (or in the `app_settings` table, which overrides these defaults at
@@ -11,6 +11,7 @@ import os
 from functools import lru_cache
 from pathlib import Path
 
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 BACKEND_DIR = Path(__file__).resolve().parent.parent
@@ -22,18 +23,18 @@ DATA_DIR.mkdir(parents=True, exist_ok=True)
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=(ROOT_DIR / ".env", BACKEND_DIR / ".env"),
-        env_prefix="ECOTWIN_",
+        env_prefix="VOLTAURA_",
         extra="ignore",
     )
 
     # ---- application -------------------------------------------------
-    app_name: str = "EcoTwin API"
+    app_name: str = "VOLTAURA API"
     environment: str = "development"
 
     # ---- database ----------------------------------------------------
     # SQLite for local dev.  Swap for a postgresql+psycopg:// URL and the
     # rest of the stack works unchanged (see backend/app/database.py).
-    database_url: str = f"sqlite:///{(DATA_DIR / 'ecotwin.db').as_posix()}"
+    database_url: str = f"sqlite:///{(DATA_DIR / 'voltaura.db').as_posix()}"
 
     # ---- CORS --------------------------------------------------------
     cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
@@ -59,7 +60,7 @@ class Settings(BaseSettings):
     min_deviation_pct: float = 12.0
     event_merge_gap_hours: int = 3
     min_event_duration_hours: int = 3
-    event_cluster_gap_hours: int = 72
+    event_cluster_gap_hours: int = 168
 
     # ---- synthetic data ----------------------------------------------
     history_days: int = 90
@@ -71,6 +72,18 @@ class Settings(BaseSettings):
     llm_model: str = "claude-sonnet-5"
     llm_enabled: bool = True   # only has effect when a key is present
 
+    # ---- investigation reasoning provider ----------------------------
+    # These intentionally use unprefixed aliases so local development can
+    # configure the Gemini provider with GEMINI_API_KEY / GEMINI_MODEL.
+    gemini_api_key: str = Field(default="", validation_alias="GEMINI_API_KEY")
+    gemini_model: str = Field(
+        default="gemini-2.5-flash",
+        validation_alias="GEMINI_MODEL",
+    )
+    # ---- IoT & Telemetry Ingestion (Step 8) ----------------------------
+    sensor_api_key: str = "dev-secret-key-lib-01"
+    device_registry_json: str = ""
+
     @property
     def cors_origin_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
@@ -78,6 +91,42 @@ class Settings(BaseSettings):
     @property
     def llm_available(self) -> bool:
         return bool(self.llm_api_key) and self.llm_enabled
+
+    @property
+    def gemini_available(self) -> bool:
+        return bool(self.gemini_api_key)
+    def authorized_devices(self) -> dict[str, dict[str, any]]:
+        import json
+        registry: dict[str, dict[str, any]] = {
+            self.sensor_api_key: {
+                "device_id": "LIB-RISER-01",
+                "building_id": 4,
+            },
+            "dev-secret-key-change-in-production": {
+                "device_id": "LIB-RISER-01",
+                "building_id": 4,
+            },
+            "dev-sensor-key-admin-01": {
+                "device_id": "ADMIN-MAIN-01",
+                "building_id": 1,
+            },
+            "dev-sensor-key-engg-01": {
+                "device_id": "ENGG-RISER-01",
+                "building_id": 2,
+            },
+            "dev-sensor-key-unregistered-building": {
+                "device_id": "GHOST-01",
+                "building_id": 9999,
+            },
+        }
+        if self.device_registry_json:
+            try:
+                extra = json.loads(self.device_registry_json)
+                if isinstance(extra, dict):
+                    registry.update(extra)
+            except Exception:
+                pass
+        return registry
 
 
 @lru_cache

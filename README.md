@@ -1,12 +1,12 @@
 <div align="center">
 
-# EcoTwin
+# VOLTAURA
 
 ### See Waste. Understand Why. Prove the Savings.
 
 **A sustainable digital twin for building resource waste.**
 
-EcoTwin detects abnormal energy and water consumption across a campus, identifies the
+VOLTAURA detects abnormal energy and water consumption across a campus, identifies the
 probable cause from measured evidence, recommends an evidence-based intervention, and
 then **verifies the saving that intervention actually delivered** against an occupancy-
 and weather-adjusted baseline.
@@ -42,8 +42,8 @@ and weather-adjusted baseline.
 
 ## 1. Project overview
 
-EcoTwin is a working prototype of a **closed-loop resource intelligence system** for a
-five-building university campus. It ingests hourly telemetry, learns what each building
+VOLTAURA is a working prototype of a **closed-loop resource intelligence system**, modelled on the **Ramaiah Institute of Technology (RIT/MSRIT)** campus in Bengaluru
+(13.0308°N, 77.5650°E). Seven real blocks around the central quadrangle. It ingests hourly telemetry, learns what each building
 *should* consume, flags what it actually consumes, explains the gap, proposes a fix, and
 measures whether the fix worked.
 
@@ -51,21 +51,45 @@ The whole product is built around one sentence:
 
 > **From anomaly detection to verified savings.**
 
-Most building-analytics tools stop at the chart. EcoTwin carries a single finding all the
+Most building-analytics tools stop at the chart. VOLTAURA carries a single finding all the
 way to a number a sustainability officer can put in a report and defend under scrutiny.
 
 **Current seeded deployment** (regenerate any time with `python scripts/seed.py`):
 
 | | |
 |---|---|
-| Buildings | 5 |
-| Telemetry | 21,600 hourly intervals (10,800 energy + 10,800 water) over 90 days |
+| Blocks | 7 |
+| Telemetry | 30,240 hourly intervals (15,120 energy + 15,120 water) over 90 days |
 | Channels per interval | 9 (kWh, L, L/h, occupancy, indoor temp, outdoor temp, HVAC / lighting / pump runtime) |
 | Anomaly events detected | 5, from 5 planted faults, with **0 false positives** |
 | Root-cause accuracy | 5 / 5 |
 | Baseline model fit | R² > 0.99, CV(RMSE) 2–5% |
 | Interventions verified at seed time | 2 (with real measured savings) |
 | Live scenarios awaiting action | 3 |
+
+
+### The campus
+
+```
+                  ADMIN              ARCHITECTURE
+     MULTIPURPOSE        QUADRANGLE            ESB
+                                                 APEX
+           LHC       DES
+```
+
+| Code | Block | Position | Floors | Area |
+|---|---|---|---|---|
+| `ADMIN` | Admin Block | North | 4 | 4,320 m² |
+| `ARCH` | Architecture Block | North-east | 4 | 5,376 m² |
+| `ESB` | ESB Block | East | 5 | 8,580 m² |
+| `APEX` | Apex Block | South-east | 5 | 7,250 m² |
+| `MPB` | Multipurpose Block | West | 3 | 4,752 m² |
+| `DES` | DES Block | South | 4 | 6,160 m² |
+| `LHC` | Lecture Hall Complex | South-west | 3 | 5,022 m² |
+
+Block identification follows the hand-drawn campus map; the satellite view informs the
+irregular spacing and the dominance of the quadrangle. Footprints and offsets are
+approximations, not a survey.
 
 ---
 
@@ -93,7 +117,7 @@ adjusted for weather and occupancy.
 
 ## 3. Solution
 
-EcoTwin implements the full loop as working software:
+VOLTAURA implements the full loop as working software:
 
 ```
 DATA → MONITOR → ANOMALY DETECTION → ROOT-CAUSE ANALYSIS
@@ -118,7 +142,7 @@ DATA → MONITOR → ANOMALY DETECTION → ROOT-CAUSE ANALYSIS
 **1 — Applying an intervention changes the physical model, not a status field.**
 
 This is the single most important design decision in the project. When you click
-*Apply Intervention*, EcoTwin closes the underlying fault in the simulated plant from that
+*Apply Intervention*, VOLTAURA closes the underlying fault in the simulated plant from that
 timestamp. Every hour of telemetry generated afterwards is produced by the same physics
 with the fault gone. The saving that verification then measures is a **genuine consequence
 of the action you took**, not a scripted outcome.
@@ -127,7 +151,7 @@ of the action you took**, not a scripted outcome.
 
 A naive before/after comparison is not evidence: if the fortnight after a change happens
 to be cooler, consumption falls for reasons that have nothing to do with the measure.
-EcoTwin fits a baseline model on the pre-intervention window and evaluates it on the post
+VOLTAURA fits a baseline model on the pre-intervention window and evaluates it on the post
 period's *own* occupancy and weather to produce an **adjusted baseline**. A saving is
 marked `VERIFIED` only when it clears **both** a configurable materiality threshold **and**
 statistical significance (Welch t-test). `NOT_VERIFIED` and `INCONCLUSIVE` are real,
@@ -162,7 +186,7 @@ when the sample is small, and capped below certainty. When nothing fits, the eng
 
 **6 — The LLM is optional and cannot change a finding.**
 
-EcoTwin runs completely without an API key. If one is configured, the LLM does exactly one
+VOLTAURA runs completely without an API key. If one is configured, the LLM does exactly one
 thing: rewrite an already-computed diagnosis into fluent prose. It never decides a cause, a
 confidence or a number, every failure path falls back silently, and the UI labels which
 text you are reading.
@@ -251,7 +275,7 @@ sequenceDiagram
 ### Repository layout
 
 ```
-ecotwin/
+voltaura/
 ├── backend/
 │   └── app/
 │       ├── main.py              FastAPI app, CORS, error handling
@@ -357,10 +381,10 @@ long-running: a modest deviation that never goes away is worse than one big spik
 | Administration | Energy | Lighting after hours | ✅ | 1 | 0 |
 | Engineering | Energy | HVAC over-run | ✅ | 1 | 0 |
 | Computer Science | Energy | UPS parasitic load | ✅ | 1 | 0 |
-| Central Library | Water | Distribution leak | ✅ | 1 | 0 |
-| Student Center | Water | Pump over-run + overflow | ✅ | 1 | 0 |
+| Lecture Hall Complex | Water | Distribution leak | ✅ | 1 | 0 |
+| Multipurpose Block | Water | Pump over-run + overflow | ✅ | 1 | 0 |
 
-**5/5 detected, 0 false positives across 21,600 intervals.**
+**5/5 detected, 0 false positives across 30,240 intervals.**
 
 ### 7.3 Root-cause analysis — transparent rule engine
 
@@ -636,13 +660,13 @@ python scripts/seed.py
 Copy `backend/.env.example` to `.env` at the repo root. Everything has a working default.
 
 ```ini
-ECOTWIN_DATABASE_URL=sqlite:///./data/ecotwin.db
-ECOTWIN_ELECTRICITY_TARIFF=8.50
-ECOTWIN_WATER_TARIFF_PER_KL=45.00
-ECOTWIN_GRID_EMISSION_FACTOR=0.71
-ECOTWIN_VERIFICATION_THRESHOLD_PCT=5.0
+VOLTAURA_DATABASE_URL=sqlite:///./data/voltaura.db
+VOLTAURA_ELECTRICITY_TARIFF=8.50
+VOLTAURA_WATER_TARIFF_PER_KL=45.00
+VOLTAURA_GRID_EMISSION_FACTOR=0.71
+VOLTAURA_VERIFICATION_THRESHOLD_PCT=5.0
 # Entirely optional — the product works fully without it
-ECOTWIN_LLM_API_KEY=
+VOLTAURA_LLM_API_KEY=
 ```
 
 ---
@@ -734,10 +758,10 @@ python scripts/export_dataset.py         # dump to data/exports/*.csv
 | Building | Fault | Resource | Window | State at seed |
 |---|---|---|---|---|
 | Engineering | AHUs never return to night setback | Energy | last 26 days | **live** |
-| Central Library | Continuous loss on the east riser | Water | last 22 days | **live** |
+| Lecture Hall Complex | Continuous loss on the east riser | Water | last 22 days | **live** |
 | Administration | Lighting contactors held on overnight | Energy | last 18 days | **live** |
 | Computer Science | UPS stuck in bypass, parasitic draw | Energy | days −74 → −52 | remediated |
-| Student Center | Failed float switch, pump + tank overflow | Water | days −62 → −41 | remediated |
+| Multipurpose Block | Failed float switch, pump + tank overflow | Water | days −62 → −41 | remediated |
 
 The three live faults drive the judge-facing demo. The two remediated ones give the
 Verification and Reports pages **real measured savings on first load**.
@@ -751,7 +775,7 @@ Verification and Reports pages **real measured savings on first load**.
 1. Start both services (backend on `:8000`, frontend on `:3000`).
 2. Open **http://localhost:3000/dashboard**.
 3. Click **Demo** in the top bar.
-4. Pick **Engineering Block HVAC over-run**.
+4. Pick **ESB Block HVAC over-run**.
 
 You land directly on the anomaly the detector found. Then, working down that single page:
 
@@ -770,9 +794,9 @@ working as designed, not a coincidence.
 
 ### The other two scenarios
 
-- **Central Library water leakage** — night flow `8.8 → 49.8 L/h`, persisting while the
+- **Lecture Hall Complex water leakage** — night flow `8.8 → 49.8 L/h`, persisting while the
   building is empty. Only visible at night; verification reveals the daytime loss too.
-- **Administration Block lighting** — lighting runtime `51 min/h` against `14 min/h` normal
+- **Admin Block lighting** — lighting runtime `51 min/h` against `14 min/h` normal
   at 1% occupancy, with HVAC normal.
 
 ### Proving it is measuring, not asserting
@@ -895,6 +919,6 @@ building is wasting resources right now" at a glance, not visual fidelity.
 
 <div align="center">
 
-**EcoTwin** — See Waste. Understand Why. Prove the Savings.
+**VOLTAURA** — See Waste. Understand Why. Prove the Savings.
 
 </div>

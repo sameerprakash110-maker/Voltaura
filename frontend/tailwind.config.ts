@@ -1,7 +1,7 @@
 import type { Config } from "tailwindcss";
 
 /**
- * EcoTwin design system.
+ * VOLTAURA design system.
  *
  * Colours are declared once as CSS custom properties in globals.css and
  * referenced here, so light and dark themes share a single set of semantic

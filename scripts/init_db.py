@@ -1,5 +1,5 @@
 """
-Create the EcoTwin database schema.
+Create the VOLTAURA database schema.
 
     python scripts/init_db.py           # create missing tables
     python scripts/init_db.py --drop    # drop everything first
@@ -20,7 +20,7 @@ from app.database import engine, init_db  # noqa: E402
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Initialise the EcoTwin database")
+    parser = argparse.ArgumentParser(description="Initialise the VOLTAURA database")
     parser.add_argument("--drop", action="store_true", help="drop all tables first")
     args = parser.parse_args()
 

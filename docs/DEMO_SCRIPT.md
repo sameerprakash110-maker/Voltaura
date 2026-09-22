@@ -1,4 +1,4 @@
-# EcoTwin — live demo script
+# VOLTAURA — live demo script
 
 A 3-minute walkthrough for judges, plus the follow-up material for a longer conversation.
 
@@ -28,7 +28,7 @@ Land on `/` and read the headline aloud:
 
 > **See Waste. Understand Why. Prove the Savings.**
 
-> "Most building analytics tools stop at the first of those three. EcoTwin does all
+> "Most building analytics tools stop at the first of those three. VOLTAURA does all
 > three, and the third one is the hard part. Let me show you the loop."
 
 The 3D campus is already rotating behind you. Click **Launch Digital Twin** or go straight
@@ -38,7 +38,7 @@ to `/dashboard`.
 
 Point at the KPI row, then the pipeline rail underneath it:
 
-> "Five buildings, 21,600 hourly intervals, five anomalies detected, two interventions
+> "Seven blocks, 30,240 hourly intervals, five anomalies detected, two interventions
 > already verified. That rail is the product loop with live counts at every stage —
 > data, monitor, detect, diagnose, recommend, intervene, verify."
 
@@ -49,7 +49,7 @@ Point at the campus chart:
 
 ### 0:50 — Jump into a scenario (10s)
 
-Click **Demo** in the top bar → **Engineering Block HVAC over-run**.
+Click **Demo** in the top bar → **ESB Block HVAC over-run**.
 
 > "Three scenarios. Each one is a real fault that the detector found on its own — nothing
 > here is pre-written."
@@ -127,7 +127,7 @@ Reset to defaults.
 
 ## If you have longer
 
-**The water leak** (`/anomalies` → Central Library)
+**The water leak** (`/anomalies` → Lecture Hall Complex)
 
 > "Night flow went from 8.8 to 49.8 litres an hour and never comes back down, even on days
 > the building is shut. During the day that leak is 5% of a building drawing 800 L/h — it's
@@ -170,7 +170,7 @@ smart meter also reports, so swapping in live telemetry changes the *source*, no
 
 **"How do you know detection actually works?"**
 Five faults were planted. The detector found five, produced exactly one event per fault, and
-raised zero false positives across 21,600 intervals. The rule engine got 5/5 causes right.
+raised zero false positives across 30,240 intervals. The rule engine got 5/5 causes right.
 It never reads the ground-truth table — `scripts/export_dataset.py` dumps both so you can
 score it yourself.
 

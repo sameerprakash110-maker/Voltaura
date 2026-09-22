@@ -19,7 +19,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import * as React from "react";
 
-import { EcoTwinMark } from "@/components/brand/mark";
+import { VOLTAURAMark } from "@/components/brand/mark";
 import { DemoLauncher } from "@/components/demo/demo-launcher";
 import { Badge, Button, Segmented, StatusDot } from "@/components/ui/primitives";
 import { useAppState } from "@/components/providers/app-state";
@@ -70,13 +70,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       >
         <div className="flex h-16 items-center justify-between border-b border-[rgb(var(--line)/0.09)] px-5">
           <Link href="/" className="flex items-center gap-2.5">
-            <EcoTwinMark className="size-[26px]" />
+            <VOLTAURAMark className="size-[26px]" />
             <div className="leading-none">
               <div className="font-display text-[15px] font-semibold tracking-tight text-ink">
-                EcoTwin
+                VOLTAURA
               </div>
               <div className="mt-0.5 text-[9px] uppercase tracking-[0.18em] text-ink-muted">
-                Resource Intelligence
+                AI-Powered Digital Twin
               </div>
             </div>
           </Link>

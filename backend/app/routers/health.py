@@ -43,7 +43,7 @@ def health(db: Session = Depends(get_db)) -> HealthResponse:
             data_end=state.data_end_ts if state else None,
             llm_enabled=llm.is_available(),
             message=(
-                "EcoTwin API is ready."
+                "VOLTAURA API is ready."
                 if seeded
                 else "Database is empty. Run: python scripts/seed.py"
             ),

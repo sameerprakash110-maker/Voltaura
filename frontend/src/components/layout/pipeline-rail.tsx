@@ -20,7 +20,7 @@ import type { PipelineStage } from "@/lib/types";
  * The product loop, rendered as data.
  *
  * This rail is the recurring motif of the whole interface. It exists because
- * the single hardest thing to communicate in thirty seconds is that EcoTwin
+ * the single hardest thing to communicate in thirty seconds is that VOLTAURA
  * does not stop at detection: it carries a finding all the way to a verified
  * saving. Showing the live count at each stage makes that claim checkable
  * rather than rhetorical.
