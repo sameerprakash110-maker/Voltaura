@@ -21,7 +21,6 @@ import { useParams, useSearchParams } from "next/navigation";
 import * as React from "react";
 
 import { EvidenceList } from "@/components/cards/domain-cards";
-import { InvestigationPanel } from "@/components/investigation/InvestigationPanel";
 import {
   ActualVsExpectedChart,
   BeforeAfterChart,
@@ -403,9 +402,6 @@ export default function AnomalyDetailPage() {
           </div>
         </Panel>
       </section>
-
-      {/* ---- deterministic investigation ---- */}
-      <InvestigationPanel anomalyId={anomaly.id} />
 
       {/* ---- recommendation ---- */}
       {recommendation ? (
